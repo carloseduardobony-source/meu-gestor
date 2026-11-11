@@ -175,6 +175,7 @@
                 <h3>Gestão de Faturas de Cartão</h3>
                 <div class="input-group"><label>Competência (AAAA-MM)</label><input type="month" id="faturas-mes" onchange="UI2.renderFaturas()"></div>
                 <button class="btn-secondary" onclick="UI2.renderFaturas()">Atualizar Faturas</button>
+                <button class="btn-primary" style="margin-top:8px;" onclick="UI5.recalcularFaturasFechamento()">🔄 Recalcular Faturas pelo Dia de Fechamento dos Cartões</button>
             </div>
             <div id="faturas-list"></div>
         </section>
