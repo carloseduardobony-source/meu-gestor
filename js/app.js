@@ -1,16 +1,16 @@
-// js/app.js
+// js/app.js - Ponto de Entrada e Roteador das 17 Views
 document.addEventListener("DOMContentLoaded", () => {
     DB.init().then(() => {
-        console.log("Banco de dados pronto.");
-        
         UI2.setupListeners();
         UI3.setupListeners();
         document.getElementById('form-novo').addEventListener('submit', UI1.saveLancamento);
+        document.getElementById('generic-edit-form').addEventListener('submit', UI5.salvarEdicaoGenerica.bind(UI5));
 
         document.querySelectorAll('.nav-item, .menu-btn').forEach(item => {
             item.addEventListener('click', () => {
                 const target = item.getAttribute('data-target');
-                
+                if (!target) return;
+
                 if (item.classList.contains('nav-item')) {
                     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                     item.classList.add('active');
@@ -31,16 +31,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     case 'view-Metas': UI3.renderMetas(); break;
                     case 'view-Transferencias': UI3.renderTransferencias(); break;
                     case 'view-QuemMeDeve': UI3.renderQuemMeDeve(); break;
-                    
-                    // Adicionados links para os módulos da view5
+                    case 'view-Conciliacao': UI4.renderSessao(); break;
+                    case 'view-Pesquisar': UI5.initPesquisa(); break;
                     case 'view-Planejamento': UI5.renderPlanejamento(); break;
-                    case 'view-Relatorios': document.getElementById('rel-ano').value = new Date().getFullYear(); UI5.gerarRelatorio(); break;
+                    case 'view-Relatorios': 
+                        document.getElementById('rel-ano').value = new Date().getFullYear(); 
+                        UI5.gerarRelatorio(); 
+                        break;
                 }
             });
         });
 
         UI1.renderDashboard();
     }).catch(err => {
-        console.error("Falha ao iniciar app:", err);
+        console.error("Falha ao iniciar aplicativo:", err);
     });
 });
