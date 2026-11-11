@@ -101,6 +101,11 @@
                 <div class="input-group"><label>Categoria</label><select id="novo-categoria" required></select></div>
                 <div class="input-group"><label>Conta / Cartão</label><select id="novo-conta" required></select></div>
                 <div class="input-group"><label>Situação</label><select id="novo-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
+                <div class="input-group">
+                    <label>Mês da Fatura (Competência Opcional)</label>
+                    <input type="month" id="novo-competencia">
+                    <small style="color: var(--text-muted); font-size: 0.75rem;">Deixe em branco para usar o mês automático da data.</small>
+                </div>
                 <div class="checkbox-group">
                     <input type="checkbox" id="novo-is-parcela" onchange="document.getElementById('novo-parcelas-container').style.display = this.checked ? 'block' : 'none'">
                     <label for="novo-is-parcela">Compra parcelada (dividir em meses)</label>
@@ -429,6 +434,7 @@
             <div class="input-group"><label>Categoria</label><select id="edit-categoria"></select></div>
             <div class="input-group"><label>Conta / Cartão</label><select id="edit-conta"></select></div>
             <div class="input-group"><label>Situação</label><select id="edit-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
+            <div class="input-group"><label>Mês da Fatura (Competência)</label><input type="month" id="edit-competencia"></div>
             <div class="row-2" style="margin-top:14px;">
                 <button class="btn-primary" onclick="UI5.salvarEdicao()">Salvar</button>
                 <button class="btn-secondary" onclick="document.getElementById('edit-modal').style.display='none'">Cancelar</button>
