@@ -207,20 +207,34 @@
             </div>
         </section>
 
-        <!-- ui4.js -->
+        <!-- ui4.js - Conciliação com MAPEAMENTO DE COLUNAS -->
         <section id="view-Conciliacao" class="view">
             <div class="card">
                 <h3>Importar Extrato (CSV)</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">Preencha a posição das colunas conforme o arquivo do seu banco.</p>
+                
                 <div class="form-container">
                     <div class="input-group"><label>Arquivo CSV</label><input type="file" id="conc-file" accept=".csv" style="padding: 8px;"></div>
                     <div class="input-group"><label>Separador</label><select id="conc-sep"><option value=",">Vírgula (,)</option><option value=";">Ponto e vírgula (;)</option></select></div>
+                    
+                    <div style="display:flex; gap:10px;">
+                        <div class="input-group" style="flex:1;"><label>Coluna Data</label><input type="number" id="conc-col-data" value="1" min="1"></div>
+                        <div class="input-group" style="flex:1;"><label>Formato Data</label><select id="conc-fmt-data"><option value="DMY">DD/MM</option><option value="YMD">AAAA-MM</option></select></div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="input-group" style="flex:1;"><label>Coluna Descrição</label><input type="number" id="conc-col-desc" value="2" min="1"></div>
+                        <div class="input-group" style="flex:1;"><label>Coluna Valor</label><input type="number" id="conc-col-val" value="3" min="1"></div>
+                    </div>
                     <button class="btn-primary" onclick="UI4.lerArquivo()">Ler Extrato</button>
                 </div>
             </div>
+
             <div class="card" id="conc-analise-container" style="display: none;">
                 <h3>Análise e Sincronização</h3>
                 <p id="conc-resumo" style="font-size: 0.9rem; margin-bottom: 12px; font-weight: bold;"></p>
-                <div id="conc-list" class="list-container"></div>
+                <div id="conc-list" class="list-container">
+                    <!-- Linhas do extrato e sugestões de match aparecerão aqui -->
+                </div>
             </div>
         </section>
 
