@@ -103,71 +103,47 @@ const UI5 = {
 
     abrirEdicao: async function(id) {
         const lancamentos = await DB.getAll("lancamentos");
-        const lan = lancamentos.find(l => l.id === id);
-        if(lan) {
-            document.getElementById('edit-id').value = lan.id;
-            document.getElementById('edit-data').value = lan.data;
-            document.getElementById('edit-item').value = lan.item;
-            document.getElementById('edit-valor').value = (lan.valor_cents / 100).toFixed(2);
-            document.getElementById('edit-status').value = lan.status;
-            document.getElementById('edit-competencia').value = lan.competencia || lan.data.substring(0, 7);
-            
-            document.getElementById('edit-modal').style.display = 'flex';
-        }
+        const lan = lancamentos.find(l => Number(l.id) === Number(id));
+        if (!lan) return;
+
+        const cats = await DB.getAll("categorias");
+        const contas = await DB.getAll("contas");
+        const cartoes = await DB.getAll("cartoes");
+
+        document.getElementById('edit-categoria').innerHTML = cats.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        document.getElementById('edit-conta').innerHTML = contas.map(c => `<option value="${c.nome}">${c.nome}</option>`).concat(cartoes.map(c => `<option value="${c.nome}">${c.nome}</option>`)).join('');
+
+        document.getElementById('edit-id').value = lan.id;
+        document.getElementById('edit-data').value = lan.data;
+        document.getElementById('edit-item').value = lan.item;
+        document.getElementById('edit-tipo').value = lan.tipo || 'Despesa';
+        document.getElementById('edit-categoria').value = lan.categoria;
+        document.getElementById('edit-conta').value = lan.conta;
+        document.getElementById('edit-valor').value = (lan.valor_cents / 100).toFixed(2);
+        document.getElementById('edit-status').value = lan.status;
+        
+        document.getElementById('edit-modal').style.display = 'flex';
     },
 
     salvarEdicao: async function() {
         const id = parseInt(document.getElementById('edit-id').value);
-        const novaData = document.getElementById('edit-data').value;
-        const novaComp = document.getElementById('edit-competencia').value;
-        const novoValor = Services.parseBRL(document.getElementById('edit-valor').value);
-        const novoStatus = document.getElementById('edit-status').value;
-        const novoItem = document.getElementById('edit-item').value;
-
-        const lancamentos = await DB.getAll("lancamentos");
-        const lanAtual = lancamentos.find(l => l.id === id);
-
-        // Verifica se é uma compra parcelada e se o usuário mudou a competência ou data
-        let moverFuturas = false;
-        if (lanAtual && lanAtual.grupo_id && (lanAtual.competencia !== novaComp || lanAtual.data !== novaData)) {
-            moverFuturas = confirm("Este lançamento faz parte de uma compra parcelada. Deseja mover também todas as parcelas FUTURAS deste grupo para acompanhar a nova data/competência?");
-        }
-
-        // Atualiza o lançamento atual
-        await DB.update("lancamentos", id, {
-            data: novaData,
-            competencia: novaComp,
-            item: novoItem,
-            valor_cents: novoValor,
-            status: novoStatus
-        });
-
-        // Se o usuário optou por mover as futuras do mesmo grupo com número maior
-        if (moverFuturas && lanAtual.grupo_id) {
-            const numAtual = lanAtual.numero || 1;
-            const futuras = lancamentos.filter(l => l.grupo_id === lanAtual.grupo_id && l.numero > numAtual);
-            
-            // Calcula a diferença de meses entre a antiga e a nova competência
-            let [yVelho, mVelho] = lanAtual.competencia.split('-').map(Number);
-            let [yNovo, mNovo] = novaComp.split('-').map(Number);
-            let diffMeses = (yNovo - yVelho) * 12 + (mNovo - mVelho);
-
-            for (let f of futuras) {
-                let [yf, mf] = f.competencia.split('-').map(Number);
-                mf += diffMeses;
-                yf += Math.floor((mf - 1) / 12);
-                mf = ((mf - 1) % 12) + 1;
-                let novaCompFutura = `${yf}-${String(mf).padStart(2, '0')}`;
-
-                await DB.update("lancamentos", f.id, {
-                    competencia: novaCompFutura
-                });
-            }
-        }
-
+        const dataIso = document.getElementById('edit-data').value;
+        const newData = {
+            data: dataIso,
+            competencia: dataIso.substring(0, 7),
+            item: document.getElementById('edit-item').value.trim(),
+            tipo: document.getElementById('edit-tipo').value,
+            categoria: document.getElementById('edit-categoria').value,
+            conta: document.getElementById('edit-conta').value,
+            valor_cents: Math.abs(Services.parseBRL(document.getElementById('edit-valor').value)),
+            status: document.getElementById('edit-status').value
+        };
+        
+        await DB.update("lancamentos", id, newData);
         document.getElementById('edit-modal').style.display = 'none';
-        UICommon.alert("Lançamento atualizado com sucesso!");
         UI1.renderExtrato();
+        this.pesquisar();
+        UI1.renderDashboard();
     },
 
     pagarFatura: async function(cartao, mes, restanteCents) {

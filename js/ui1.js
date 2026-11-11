@@ -191,54 +191,46 @@ const UI1 = {
     },
 
     saveLancamento: async function(e) {
-    e.preventDefault();
-    const dataIso = document.getElementById('novo-data').value;
-    const cents = Math.round(parseFloat(document.getElementById('novo-valor').value) * 100);
-    const itemDesc = document.getElementById('novo-item').value;
-    const tipo = document.getElementById('novo-tipo').value;
-    const categoria = document.getElementById('novo-categoria').value;
-    const conta = document.getElementById('novo-conta').value;
-    const status = document.getElementById('novo-status').value;
-    const compManual = document.getElementById('novo-competencia').value;
-    const isParcela = document.getElementById('novo-is-parcela').checked;
-    
-    // Base da competência (se o usuário escolheu manual, usa ela; senão pega o ano-mês da data)
-    let baseComp = compManual ? compManual : dataIso.substring(0, 7);
-    
-    if (isParcela) {
-        const n = parseInt(document.getElementById('novo-parcelas').value || 2);
-        const parcelasVals = Services.splitParcelas(cents, n);
+        e.preventDefault();
+        const dataIso = document.getElementById('novo-data').value;
+        const cents = Math.abs(Services.parseBRL(document.getElementById('novo-valor').value));
+        const itemDesc = document.getElementById('novo-item').value.trim();
+        const tipo = document.getElementById('novo-tipo').value;
+        const categoria = document.getElementById('novo-categoria').value;
+        const conta = document.getElementById('novo-conta').value;
+        const status = document.getElementById('novo-status').value;
+        const isParcela = document.getElementById('novo-is-parcela').checked;
         
-        const grupoId = await DB.add("grupos_parc", { descricao: itemDesc, total_cents: cents, n, data_compra: dataIso, conta, categoria });
-        
-        let currentDate = new Date(dataIso);
-        for(let i=0; i<n; i++) {
-            let parcVal = baseVal + (i < resto ? 1 : 0);
-            let pDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, currentDate.getDate());
+        if (isParcela) {
+            const n = parseInt(document.getElementById('novo-parcelas').value || 2);
+            const parcelasVals = Services.splitParcelas(cents, n);
+            const grupoId = await DB.add("grupos_parc", { descricao: itemDesc, total_cents: cents, n, data_compra: dataIso, conta, categoria });
             
-            // Calcula competências incrementais mês a mês para as parcelas futuras
-            let [y, m] = baseComp.split('-').map(Number);
-            m += i;
-            y += Math.floor((m - 1) / 12);
-            m = ((m - 1) % 12) + 1;
-            let compParcela = `${y}-${String(m).padStart(2, '0')}`;
-
+            let [y, m, d] = dataIso.split('-').map(Number);
+            for (let i = 0; i < n; i++) {
+                const compParc = Services.addMonths(`${y}-${String(m).padStart(2, '0')}`, i);
+                const pData = `${compParc}-${String(d).padStart(2, '0')}`;
+                const descParcela = `${itemDesc} (${i+1} de ${n})`;
+                await DB.add("lancamentos", {
+                    data: pData, competencia: compParc, item: descParcela,
+                    tipo, valor_cents: parcelasVals[i], categoria, conta,
+                    status: i === 0 ? status : 'pendente',
+                    origem: 'parcela', grupo_id: grupoId, numero: i+1,
+                    hash: Services.contentHash(pData, descParcela, tipo, categoria, conta, parcelasVals[i])
+                });
+            }
+            UICommon.alert(`Compra parcelada em ${n}x registrada com sucesso!`);
+        } else {
             await DB.add("lancamentos", {
-                data: pDate.toISOString().split('T')[0],
-                competencia: compParcela,
-                item: `${itemDesc} (${i+1} de ${n})`,
-                tipo, valor_cents: parcelasVals[i], categoria, conta, status,
-                origem: 'parcela', grupo_id: grupoId, numero: i+1
+                data: dataIso, competencia: dataIso.substring(0, 7), item: itemDesc,
+                tipo, valor_cents: cents, categoria, conta, status, origem: 'manual',
+                hash: Services.contentHash(dataIso, itemDesc, tipo, categoria, conta, cents)
             });
+            UICommon.alert("Lançamento salvo com sucesso!");
         }
-        UICommon.alert(`Salvo parcelado em ${n}x!`);
-    } else {
-        await DB.add("lancamentos", {
-            data: dataIso, competencia: baseComp, item: itemDesc,
-            tipo, valor_cents: cents, categoria, conta, status, origem: 'manual'
-        });
-        UICommon.alert("Lançamento salvo!");
+        document.getElementById('form-novo').reset();
+        document.getElementById('novo-parcelas-container').style.display = 'none';
+        UI1.populateNovoLancamento();
+        UI1.renderDashboard();
     }
-    document.getElementById('form-novo').reset();
-    UI1.populateNovoLancamento();
-}
+};
