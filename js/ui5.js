@@ -218,6 +218,34 @@ const UI5 = {
         UI1.renderDashboard();
     },
 
+    recalcularFaturasFechamento: async function() {
+        const cartoes = await DB.getAll("cartoes");
+        if (!cartoes.length) return UICommon.alert("Cadastre seus cartões e os dias de fechamento primeiro.");
+        if (!confirm("Isso atualizará a fatura (competência) de todas as despesas de cartão de crédito aplicando a regra do Dia de Fechamento cadastrado em cada cartão. Deseja continuar?")) return;
+
+        const lancamentos = await DB.getAll("lancamentos");
+        const normCard = (s) => String(s || "").toLowerCase().replace(/^cart[aã]o\s+/i, "").trim();
+        let alterados = 0;
+
+        for (const l of lancamentos) {
+            if (l.tipo !== "Despesa") continue;
+            const matchCard = cartoes.find(c => c.nome === l.conta || normCard(c.nome) === normCard(l.conta));
+            if (!matchCard) continue;
+
+            const novaComp = Services.calcularCompetenciaCartao(l.data, matchCard.nome, cartoes, "Despesa");
+            const novoNomeConta = matchCard.nome;
+            if (l.competencia !== novaComp || l.conta !== novoNomeConta) {
+                await DB.update("lancamentos", l.id, { competencia: novaComp, conta: novoNomeConta });
+                alterados++;
+            }
+        }
+
+        UICommon.alert(`Pronto! ${alterados} lançamento(s) foram ajustados para a fatura correta conforme o dia de fechamento.`);
+        UI2.renderFaturas();
+        UI1.renderExtrato();
+        UI1.renderDashboard();
+    },
+
     pagarFatura: async function(cartao, mes, restanteCents) {
         if (restanteCents <= 0) return UICommon.alert("Esta fatura já consta como integralmente paga!");
         if (confirm(`Confirmar o pagamento integral da fatura de ${cartao} (${mes}) no valor de ${Services.formatBRL(restanteCents)}?`)) {
