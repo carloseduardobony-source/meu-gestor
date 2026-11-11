@@ -26,6 +26,9 @@
         </section>
 
         <section id="view-Extrato" class="view">
+            <div class="filter-bar" style="margin-bottom: 10px;">
+                <input type="month" id="extrato-mes" class="input-field" onchange="UI1.renderExtrato()" style="width:100%; padding: 8px;">
+            </div>
             <div id="extrato-list" class="list-container"></div>
         </section>
 
@@ -33,17 +36,11 @@
             <form id="form-novo" class="form-container">
                 <div class="input-group"><label>Data</label><input type="date" id="novo-data" required></div>
                 <div class="input-group"><label>Descrição</label><input type="text" id="novo-item" required></div>
-                <div class="input-group">
-                    <label>Tipo</label>
-                    <select id="novo-tipo"><option value="Despesa">Despesa</option><option value="Receita">Receita</option></select>
-                </div>
+                <div class="input-group"><label>Tipo</label><select id="novo-tipo"><option value="Despesa">Despesa</option><option value="Receita">Receita</option></select></div>
                 <div class="input-group"><label>Valor (R$)</label><input type="number" id="novo-valor" step="0.01" required></div>
                 <div class="input-group"><label>Categoria</label><select id="novo-categoria" required></select></div>
                 <div class="input-group"><label>Conta / Cartão</label><select id="novo-conta" required></select></div>
-                <div class="input-group">
-                    <label>Situação</label>
-                    <select id="novo-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select>
-                </div>
+                <div class="input-group"><label>Situação</label><select id="novo-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
                 <div class="input-group checkbox-group">
                     <input type="checkbox" id="novo-is-parcela" onchange="document.getElementById('novo-parcelas-container').style.display = this.checked ? 'block' : 'none'">
                     <label for="novo-is-parcela">Compra parcelada</label>
@@ -58,6 +55,7 @@
         <!-- Menu Lateral/Navegação completa -->
         <section id="view-Menu" class="view">
             <div class="menu-list">
+                <button class="menu-btn" data-target="view-Pesquisar">🔍 Pesquisar</button>
                 <button class="menu-btn" data-target="view-ContasCartoes">💳 Contas e Cartões</button>
                 <button class="menu-btn" data-target="view-Faturas">🧾 Faturas</button>
                 <button class="menu-btn" data-target="view-Parcelamentos">📦 Parcelamentos</button>
@@ -67,7 +65,6 @@
                 <button class="menu-btn" data-target="view-QuemMeDeve">🤝 Quem Me Deve</button>
                 <button class="menu-btn" data-target="view-Transferencias">🔄 Transferências</button>
                 <button class="menu-btn" data-target="view-Planejamento">📅 Planejamento Mensal</button>
-                <button class="menu-btn" data-target="view-Pesquisar">🔍 Pesquisar</button>
                 <button class="menu-btn" data-target="view-Relatorios">📈 Relatórios</button>
                 <button class="menu-btn" data-target="view-Conciliacao">⚖️ Conciliação</button>
                 <button class="menu-btn" data-target="view-ImportExport">📥 Importação e Exportação</button>
@@ -76,56 +73,189 @@
         </section>
 
         <!-- ui2.js -->
-        <section id="view-ContasCartoes" class="view"><div class="card"><h3>Contas e Cartões</h3><div id="contas-list"></div></div></section>
-        <section id="view-Faturas" class="view"><div class="card"><h3>Faturas</h3><div id="faturas-list"></div></div></section>
-        <section id="view-Parcelamentos" class="view"><div class="card"><h3>Parcelamentos</h3><div id="parcelas-list"></div></div></section>
-        <section id="view-ContasFixas" class="view"><div class="card"><h3>Contas Fixas</h3><button class="btn-primary" onclick="UI2.gerarFixasMes()">Gerar previstas do mês</button><div id="fixas-list"></div></div></section>
-        
-        <!-- ui3.js -->
-        <section id="view-Categorias" class="view"><div class="card"><h3>Categorias</h3><div id="cats-list"></div></div></section>
-        <section id="view-Metas" class="view"><div class="card"><h3>Metas</h3><div id="metas-list"></div></div></section>
-        <section id="view-QuemMeDeve" class="view"><div class="card"><h3>Quem Me Deve</h3><div id="qmd-list"></div></div></section>
-        <section id="view-Transferencias" class="view"><div class="card"><h3>Transferências</h3><div id="transf-list"></div></div></section>
-        <section id="view-Planejamento" class="view"><div class="card"><h3>Planejamento</h3><div id="plan-list"></div></div></section>
-        <section id="view-Pesquisar" class="view"><div class="card"><h3>Pesquisar</h3><input type="text" id="search-input" placeholder="Buscar..." style="width:100%; padding:10px; margin-bottom:10px;"><div id="search-results"></div></div></section>
-        <section id="view-Relatorios" class="view"><div class="card"><h3>Relatórios</h3><p>Visão gerencial consolidada.</p></div></section>
-        <section id="view-ImportExport" class="view"><div class="card"><h3>Importação e Exportação</h3><p>Use a versão Desktop para importar planilhas nativamente.</p></div></section>
-        <section id="view-Config" class="view">
+        <section id="view-ContasCartoes" class="view">
             <div class="card">
-                <h3>Backup Offline</h3>
-                <p>Seus dados estão protegidos apenas no aparelho. Faça backup constante.</p>
-                <button id="btn-export" class="btn-secondary" onclick="UI3.exportBackup()">Exportar Todos os Dados (CSV)</button>
+                <h3>Nova Conta</h3>
+                <form id="form-conta" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Nome da Conta</label><input type="text" id="c-nome" required></div>
+                    <div class="input-group"><label>Tipo</label><select id="c-tipo"><option>Conta</option><option>Carteira</option></select></div>
+                    <div class="input-group"><label>Saldo Inicial (R$)</label><input type="number" id="c-saldo" step="0.01"></div>
+                    <button type="submit" class="btn-primary">Salvar Conta</button>
+                </form>
+                <h4 style="margin-top:20px;">Contas Cadastradas</h4>
+                <div id="contas-list" class="list-container"></div>
+            </div>
+            <div class="card">
+                <h3>Novo Cartão</h3>
+                <form id="form-cartao" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Nome do Cartão</label><input type="text" id="k-nome" required></div>
+                    <div class="input-group"><label>Conta de Pagamento</label><select id="k-pagto" required></select></div>
+                    <div class="input-group"><label>Limite (R$)</label><input type="number" id="k-lim" step="0.01" required></div>
+                    <div class="input-group"><label>Dia de Fechamento</label><input type="number" id="k-fech" min="1" max="31" required></div>
+                    <div class="input-group"><label>Dia de Vencimento</label><input type="number" id="k-venc" min="1" max="31"></div>
+                    <button type="submit" class="btn-primary">Salvar Cartão</button>
+                </form>
+                <h4 style="margin-top:20px;">Cartões Cadastrados</h4>
+                <div id="cartoes-list" class="list-container"></div>
             </div>
         </section>
 
-        <!-- ui4.js - Atualizado com a interface de conciliação do FileReader -->
+        <section id="view-Faturas" class="view">
+            <div class="card">
+                <h3>Faturas</h3>
+                <div class="input-group"><label>Mês (AAAA-MM)</label><input type="month" id="faturas-mes"></div>
+                <button class="btn-secondary" onclick="UI2.renderFaturas()">Buscar</button>
+                <div id="faturas-list" class="list-container" style="margin-top:15px;"></div>
+            </div>
+        </section>
+        
+        <section id="view-Parcelamentos" class="view">
+            <div class="card"><h3>Parcelamentos Ativos</h3><div id="parcelas-list" class="list-container"></div></div>
+        </section>
+
+        <section id="view-ContasFixas" class="view">
+            <div class="card">
+                <h3>Nova Conta Fixa</h3>
+                <form id="form-fixa" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Descrição</label><input type="text" id="f-desc" required></div>
+                    <div class="input-group"><label>Valor (R$)</label><input type="number" id="f-val" step="0.01" required></div>
+                    <div class="input-group"><label>Dia do Vencimento</label><input type="number" id="f-dia" min="1" max="31" required></div>
+                    <div class="input-group"><label>Categoria</label><select id="f-cat" required></select></div>
+                    <div class="input-group"><label>Conta / Cartão</label><select id="f-conta" required></select></div>
+                    <button type="submit" class="btn-primary">Salvar Conta Fixa</button>
+                </form>
+                <button class="btn-secondary" onclick="UI2.gerarFixasMes()" style="margin-top:10px;">Gerar previstas do mês</button>
+                <h4 style="margin-top:20px;">Contas Fixas Cadastradas</h4>
+                <div id="fixas-list" class="list-container"></div>
+            </div>
+        </section>
+        
+        <!-- ui3.js -->
+        <section id="view-Categorias" class="view">
+            <div class="card">
+                <h3>Nova Categoria</h3>
+                <form id="form-cat" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Nome da Categoria</label><input type="text" id="cat-nome" required></div>
+                    <div class="input-group"><label>Limite Mensal (R$)</label><input type="number" id="cat-lim" step="0.01"></div>
+                    <button type="submit" class="btn-primary">Salvar Categoria</button>
+                </form>
+                <h4 style="margin-top:20px;">Limites e Uso</h4>
+                <div id="cats-list" class="list-container"></div>
+            </div>
+        </section>
+
+        <section id="view-Metas" class="view">
+            <div class="card">
+                <h3>Nova Meta Financeira</h3>
+                <form id="form-meta" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Nome</label><input type="text" id="m-nome" required></div>
+                    <div class="input-group"><label>Objetivo (R$)</label><input type="number" id="m-obj" step="0.01" required></div>
+                    <div class="input-group"><label>Prazo</label><input type="date" id="m-prazo"></div>
+                    <button type="submit" class="btn-primary">Criar Meta</button>
+                </form>
+                <h4 style="margin-top:20px;">Metas Ativas</h4>
+                <div id="metas-list" class="list-container"></div>
+            </div>
+        </section>
+
+        <section id="view-QuemMeDeve" class="view">
+            <div class="card">
+                <h3>Novo Empréstimo a Receber</h3>
+                <form id="form-qmd" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Devedor</label><input type="text" id="q-dev" required></div>
+                    <div class="input-group"><label>Descrição</label><input type="text" id="q-desc"></div>
+                    <div class="input-group"><label>Valor Total (R$)</label><input type="number" id="q-val" step="0.01" required></div>
+                    <div class="input-group"><label>Nº Parcelas</label><input type="number" id="q-n" value="1" required></div>
+                    <div class="input-group"><label>Data Início</label><input type="date" id="q-ini" required></div>
+                    <button type="submit" class="btn-primary">Registrar Dívida</button>
+                </form>
+                <h4 style="margin-top:20px;">A Receber</h4>
+                <div id="qmd-list" class="list-container"></div>
+            </div>
+        </section>
+
+        <section id="view-Transferencias" class="view">
+            <div class="card">
+                <h3>Nova Transferência</h3>
+                <form id="form-transf" class="form-container" style="margin-top:10px;">
+                    <div class="input-group"><label>Data</label><input type="date" id="t-data" required></div>
+                    <div class="input-group"><label>Origem</label><select id="t-orig" required></select></div>
+                    <div class="input-group"><label>Destino</label><select id="t-dest" required></select></div>
+                    <div class="input-group"><label>Valor (R$)</label><input type="number" id="t-val" step="0.01" required></div>
+                    <div class="input-group"><label>Descrição</label><input type="text" id="t-desc" required></div>
+                    <button type="submit" class="btn-primary">Transferir</button>
+                </form>
+                <h4 style="margin-top:20px;">Histórico</h4>
+                <div id="transf-list" class="list-container"></div>
+            </div>
+        </section>
+
+        <section id="view-ImportExport" class="view">
+            <div class="card">
+                <h3>Importação e Exportação (Desktop)</h3>
+                <p>Use a versão Desktop (Python) para importar a planilha "Minhas Finanças.xlsx" nativamente.</p>
+                <p>Neste aplicativo web offline, use o módulo <strong>Conciliação</strong> para ler extratos bancários .csv.</p>
+            </div>
+        </section>
+
+        <section id="view-Config" class="view">
+            <div class="card">
+                <h3>Backup Offline</h3>
+                <p>Seus dados estão protegidos apenas no armazenamento interno (IndexedDB) deste navegador.</p>
+                <p style="color:var(--danger); font-size:0.8rem; margin-bottom:12px;">Se você limpar o cache do Safari, os dados serão perdidos. Faça backups regulares.</p>
+                <button id="btn-export" class="btn-secondary" onclick="UI3.exportBackup()">Baixar Backup Completo (CSV)</button>
+            </div>
+        </section>
+
+        <!-- ui4.js -->
         <section id="view-Conciliacao" class="view">
             <div class="card">
                 <h3>Importar Extrato (CSV)</h3>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">Selecione o arquivo exportado pelo seu banco.</p>
-                
                 <div class="form-container">
-                    <div class="input-group">
-                        <label>Arquivo CSV</label>
-                        <input type="file" id="conc-file" accept=".csv" style="padding: 8px;">
-                    </div>
-                    <div class="input-group">
-                        <label>Separador</label>
-                        <select id="conc-sep">
-                            <option value=",">Vírgula (,)</option>
-                            <option value=";">Ponto e vírgula (;)</option>
-                        </select>
-                    </div>
+                    <div class="input-group"><label>Arquivo CSV</label><input type="file" id="conc-file" accept=".csv" style="padding: 8px;"></div>
+                    <div class="input-group"><label>Separador</label><select id="conc-sep"><option value=",">Vírgula (,)</option><option value=";">Ponto e vírgula (;)</option></select></div>
                     <button class="btn-primary" onclick="UI4.lerArquivo()">Ler Extrato</button>
                 </div>
             </div>
-
             <div class="card" id="conc-analise-container" style="display: none;">
                 <h3>Análise e Sincronização</h3>
                 <p id="conc-resumo" style="font-size: 0.9rem; margin-bottom: 12px; font-weight: bold;"></p>
-                <div id="conc-list" class="list-container">
-                    <!-- Linhas do extrato e sugestões de match aparecerão aqui -->
+                <div id="conc-list" class="list-container"></div>
+            </div>
+        </section>
+
+        <!-- ui5.js: Pesquisar, Relatórios, Planejamento (AÇÕES TÉCNICAS E EDIÇÃO) -->
+        <section id="view-Pesquisar" class="view">
+            <div class="card">
+                <h3>Pesquisa Global</h3>
+                <input type="text" id="search-input" placeholder="Buscar lançamentos (descrição ou parcela)..." style="width:100%; padding:10px; margin-bottom:10px; border: 1px solid var(--border); border-radius: 8px;" oninput="UI5.pesquisar()">
+                <div id="search-results" class="list-container"></div>
+            </div>
+        </section>
+
+        <section id="view-Planejamento" class="view">
+            <div class="card">
+                <h3>Planejamento Mensal (12 Meses)</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">Projetação do caixa cruzando saldo atual, faturas e parcelamentos previstos.</p>
+                <div id="plan-list" class="list-container"></div>
+            </div>
+        </section>
+
+        <section id="view-Relatorios" class="view">
+            <div class="card">
+                <h3>Relatórios Consolidados</h3>
+                <div class="input-group">
+                    <label>Tipo de Relatório</label>
+                    <select id="rel-tipo" onchange="UI5.gerarRelatorio()">
+                        <option value="mensal">Mensal Inteligente</option>
+                        <option value="anual">Anual Completo (Receitas/Despesas)</option>
+                    </select>
                 </div>
+                <div class="input-group">
+                    <label>Ano</label>
+                    <input type="number" id="rel-ano" onchange="UI5.gerarRelatorio()">
+                </div>
+                <div id="rel-list" class="list-container"></div>
             </div>
         </section>
 
@@ -138,7 +268,23 @@
         <div class="nav-item" data-target="view-Menu"><span class="icon">☰</span><span class="label">Menu</span></div>
     </nav>
 
-    <!-- Importando os Módulos (Ordem de dependência) -->
+    <!-- Modal nativo de edição de lançamento -->
+    <div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:var(--card-bg); width:90%; border-radius:12px; padding:20px;">
+            <h3>Editar Lançamento</h3>
+            <input type="hidden" id="edit-id">
+            <div class="input-group" style="margin-top:10px;"><label>Data</label><input type="date" id="edit-data"></div>
+            <div class="input-group"><label>Descrição</label><input type="text" id="edit-item"></div>
+            <div class="input-group"><label>Valor (R$)</label><input type="number" step="0.01" id="edit-valor"></div>
+            <div class="input-group"><label>Status</label><select id="edit-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn-primary" onclick="UI5.salvarEdicao()">Salvar</button>
+                <button class="btn-secondary" onclick="document.getElementById('edit-modal').style.display='none'">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Importando os Módulos -->
     <script src="js/database.js"></script>
     <script src="js/services.js"></script>
     <script src="js/ui_common.js"></script>
@@ -146,11 +292,7 @@
     <script src="js/ui2.js"></script>
     <script src="js/ui3.js"></script>
     <script src="js/ui4.js"></script>
+    <script src="js/ui5.js"></script>
     <script src="js/app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log("SW ok."));
-        }
-    </script>
 </body>
 </html>
