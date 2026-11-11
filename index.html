@@ -14,7 +14,7 @@
     </header>
 
     <main id="app-content">
-        <!-- Dashboard -->
+        <!-- 1. Dashboard -->
         <section id="view-Dashboard" class="view active">
             <div class="card kpi-card"><div class="kpi-title">SALDO DO MÊS</div><div class="kpi-value" id="kpi-saldo">R$ 0,00</div></div>
             <div class="kpi-row">
@@ -25,7 +25,7 @@
             <div class="card"><div class="kpi-title">COMPROMETIDO EM FATURAS</div><div class="kpi-value des" id="kpi-faturas">R$ 0,00</div></div>
         </section>
 
-        <!-- Extrato -->
+        <!-- 2. Extrato -->
         <section id="view-Extrato" class="view">
             <div class="filter-bar" style="margin-bottom: 10px;">
                 <input type="month" id="extrato-mes" class="input-field" onchange="UI1.renderExtrato()" style="width:100%; padding: 8px;">
@@ -33,7 +33,7 @@
             <div id="extrato-list" class="list-container"></div>
         </section>
 
-        <!-- Novo Lançamento com Competência Customizada -->
+        <!-- 3. Novo Lançamento -->
         <section id="view-Novo_lancamento" class="view">
             <form id="form-novo" class="form-container">
                 <div class="input-group"><label>Data</label><input type="date" id="novo-data" required></div>
@@ -61,7 +61,7 @@
             </form>
         </section>
 
-        <!-- Menu -->
+        <!-- Menu Completo -->
         <section id="view-Menu" class="view">
             <div class="menu-list">
                 <button class="menu-btn" data-target="view-Pesquisar">🔍 Pesquisar</button>
@@ -81,7 +81,6 @@
             </div>
         </section>
 
-        <!-- Demais telas -->
         <section id="view-ContasCartoes" class="view">
             <div class="card">
                 <h3>Nova Conta</h3>
@@ -285,7 +284,7 @@
         <div class="nav-item" data-target="view-Menu"><span class="icon">☰</span><span class="label">Menu</span></div>
     </nav>
 
-    <!-- Modal de Edição de Lançamento com Competência -->
+    <!-- Modal de Edição -->
     <div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:var(--card-bg); width:90%; border-radius:12px; padding:20px;">
             <h3>Editar Lançamento</h3>
