@@ -110,37 +110,109 @@ const UI5 = {
         const contas = await DB.getAll("contas");
         const cartoes = await DB.getAll("cartoes");
 
-        document.getElementById('edit-categoria').innerHTML = cats.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
-        document.getElementById('edit-conta').innerHTML = contas.map(c => `<option value="${c.nome}">${c.nome}</option>`).concat(cartoes.map(c => `<option value="${c.nome}">${c.nome}</option>`)).join('');
+        const selCat = document.getElementById('edit-categoria');
+        if (selCat) {
+            selCat.innerHTML = cats.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+            if (lan.categoria && !cats.some(c => c.nome === lan.categoria)) {
+                selCat.innerHTML += `<option value="${lan.categoria}">${lan.categoria}</option>`;
+            }
+            selCat.value = lan.categoria || '';
+        }
+
+        const selConta = document.getElementById('edit-conta');
+        if (selConta) {
+            selConta.innerHTML = contas.map(c => `<option value="${c.nome}">${c.nome}</option>`)
+                .concat(cartoes.map(c => `<option value="${c.nome}">${c.nome}</option>`)).join('');
+            if (lan.conta && !contas.some(c => c.nome === lan.conta) && !cartoes.some(c => c.nome === lan.conta)) {
+                selConta.innerHTML += `<option value="${lan.conta}">${lan.conta}</option>`;
+            }
+            selConta.value = lan.conta || '';
+        }
 
         document.getElementById('edit-id').value = lan.id;
         document.getElementById('edit-data').value = lan.data;
         document.getElementById('edit-item').value = lan.item;
-        document.getElementById('edit-tipo').value = lan.tipo || 'Despesa';
-        document.getElementById('edit-categoria').value = lan.categoria;
-        document.getElementById('edit-conta').value = lan.conta;
+        if (document.getElementById('edit-tipo')) document.getElementById('edit-tipo').value = lan.tipo || 'Despesa';
         document.getElementById('edit-valor').value = (lan.valor_cents / 100).toFixed(2);
         document.getElementById('edit-status').value = lan.status;
+        if (document.getElementById('edit-competencia')) {
+            document.getElementById('edit-competencia').value = lan.competencia || lan.data.substring(0, 7);
+        }
         
         document.getElementById('edit-modal').style.display = 'flex';
     },
 
     salvarEdicao: async function() {
         const id = parseInt(document.getElementById('edit-id').value);
-        const dataIso = document.getElementById('edit-data').value;
-        const newData = {
-            data: dataIso,
-            competencia: dataIso.substring(0, 7),
-            item: document.getElementById('edit-item').value.trim(),
-            tipo: document.getElementById('edit-tipo').value,
-            categoria: document.getElementById('edit-categoria').value,
-            conta: document.getElementById('edit-conta').value,
-            valor_cents: Math.abs(Services.parseBRL(document.getElementById('edit-valor').value)),
-            status: document.getElementById('edit-status').value
-        };
-        
-        await DB.update("lancamentos", id, newData);
+        const novaData = document.getElementById('edit-data').value;
+        const elComp = document.getElementById('edit-competencia');
+        const novaComp = (elComp && elComp.value) ? elComp.value : novaData.substring(0, 7);
+        const novoTipo = document.getElementById('edit-tipo') ? document.getElementById('edit-tipo').value : 'Despesa';
+        const novaCat = document.getElementById('edit-categoria') ? document.getElementById('edit-categoria').value : '';
+        const novaConta = document.getElementById('edit-conta') ? document.getElementById('edit-conta').value : '';
+        const novoValor = Math.abs(Services.parseBRL(document.getElementById('edit-valor').value));
+        const novoStatus = document.getElementById('edit-status').value;
+        const novoItem = document.getElementById('edit-item').value;
+
+        const lancamentos = await DB.getAll("lancamentos");
+        const lanAtual = lancamentos.find(l => Number(l.id) === Number(id));
+
+        const compAntiga = lanAtual ? (lanAtual.competencia || lanAtual.data.substring(0, 7)) : novaComp;
+        const isParcela = lanAtual && (lanAtual.grupo_id || /\(\d+\s*(?:de|\/)\s*\d+\)/i.test(lanAtual.item || ''));
+
+        let moverFuturas = false;
+        if (isParcela && compAntiga !== novaComp) {
+            moverFuturas = confirm("Este lançamento faz parte de uma compra parcelada. Deseja mover também todas as parcelas FUTURAS para acompanhar a nova fatura (" + novaComp.slice(5,7) + "/" + novaComp.slice(0,4) + ")?");
+        }
+
+        // Atualiza o lançamento atual preservando todos os campos
+        await DB.update("lancamentos", id, {
+            data: novaData,
+            competencia: novaComp,
+            item: novoItem,
+            tipo: novoTipo,
+            categoria: novaCat,
+            conta: novaConta,
+            valor_cents: novoValor,
+            status: novoStatus
+        });
+
+        // Se o usuário optou por mover as parcelas futuras em cascata
+        if (moverFuturas && lanAtual) {
+            let [yVelho, mVelho] = compAntiga.split('-').map(Number);
+            let [yNovo, mNovo] = novaComp.split('-').map(Number);
+            let diffMeses = (yNovo - yVelho) * 12 + (mNovo - mVelho);
+
+            let futuras = [];
+            if (lanAtual.grupo_id) {
+                const numAtual = lanAtual.numero || 1;
+                futuras = lancamentos.filter(l => l.grupo_id === lanAtual.grupo_id && (l.numero || 0) > numAtual);
+            } else {
+                // Caso tenha vindo de importação sem grupo_id, identifica pelo padrão "Descrição (X de N)" ou "(X/N)"
+                const m = (lanAtual.item || '').match(/^(.*?)\s*\((\d+)\s*(de|\/)\s*(\d+)\)\s*$/i);
+                if (m) {
+                    const prefixo = m[1].trim().toLowerCase();
+                    const numAtual = parseInt(m[2]);
+                    const totalParc = parseInt(m[4]);
+                    futuras = lancamentos.filter(l => {
+                        if (l.conta !== lanAtual.conta) return false;
+                        const ml = (l.item || '').match(/^(.*?)\s*\((\d+)\s*(de|\/)\s*(\d+)\)\s*$/i);
+                        return ml && ml[1].trim().toLowerCase() === prefixo && parseInt(ml[4]) === totalParc && parseInt(ml[2]) > numAtual;
+                    });
+                }
+            }
+
+            for (let f of futuras) {
+                const compF = f.competencia || f.data.substring(0, 7);
+                const novaCompFutura = Services.addMonths(compF, diffMeses);
+                await DB.update("lancamentos", f.id, {
+                    competencia: novaCompFutura
+                });
+            }
+        }
+
         document.getElementById('edit-modal').style.display = 'none';
+        UICommon.alert("Lançamento atualizado com sucesso!");
         UI1.renderExtrato();
         this.pesquisar();
         UI1.renderDashboard();

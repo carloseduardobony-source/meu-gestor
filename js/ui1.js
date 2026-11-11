@@ -188,45 +188,55 @@ const UI1 = {
         if (!document.getElementById("novo-data").value) {
             document.getElementById("novo-data").valueAsDate = new Date();
         }
+        const elComp = document.getElementById("novo-competencia");
+        if (elComp) elComp.value = '';
     },
 
     saveLancamento: async function(e) {
         e.preventDefault();
         const dataIso = document.getElementById('novo-data').value;
-        const cents = Math.abs(Services.parseBRL(document.getElementById('novo-valor').value));
-        const itemDesc = document.getElementById('novo-item').value.trim();
+        const cents = Math.round(parseFloat(document.getElementById('novo-valor').value) * 100);
+        const itemDesc = document.getElementById('novo-item').value;
         const tipo = document.getElementById('novo-tipo').value;
         const categoria = document.getElementById('novo-categoria').value;
         const conta = document.getElementById('novo-conta').value;
         const status = document.getElementById('novo-status').value;
+        const elComp = document.getElementById('novo-competencia');
+        const compManual = elComp ? elComp.value : '';
         const isParcela = document.getElementById('novo-is-parcela').checked;
+        
+        // Base da competência (se o usuário escolheu manual, usa ela; senão pega o ano-mês da data)
+        let baseComp = compManual ? compManual : dataIso.substring(0, 7);
         
         if (isParcela) {
             const n = parseInt(document.getElementById('novo-parcelas').value || 2);
             const parcelasVals = Services.splitParcelas(cents, n);
+            
             const grupoId = await DB.add("grupos_parc", { descricao: itemDesc, total_cents: cents, n, data_compra: dataIso, conta, categoria });
             
-            let [y, m, d] = dataIso.split('-').map(Number);
+            let [anoData, mesData, diaData] = dataIso.split('-').map(Number);
             for (let i = 0; i < n; i++) {
-                const compParc = Services.addMonths(`${y}-${String(m).padStart(2, '0')}`, i);
-                const pData = `${compParc}-${String(d).padStart(2, '0')}`;
-                const descParcela = `${itemDesc} (${i+1} de ${n})`;
+                let pDate = new Date(anoData, (mesData - 1) + i, diaData);
+                let pDateIso = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}-${String(pDate.getDate()).padStart(2, '0')}`;
+                
+                // Calcula competências incrementais mês a mês para as parcelas futuras
+                let compParcela = Services.addMonths(baseComp, i);
+
                 await DB.add("lancamentos", {
-                    data: pData, competencia: compParc, item: descParcela,
-                    tipo, valor_cents: parcelasVals[i], categoria, conta,
-                    status: i === 0 ? status : 'pendente',
-                    origem: 'parcela', grupo_id: grupoId, numero: i+1,
-                    hash: Services.contentHash(pData, descParcela, tipo, categoria, conta, parcelasVals[i])
+                    data: pDateIso,
+                    competencia: compParcela,
+                    item: `${itemDesc} (${i+1} de ${n})`,
+                    tipo, valor_cents: parcelasVals[i], categoria, conta, status,
+                    origem: 'parcela', grupo_id: grupoId, numero: i+1
                 });
             }
-            UICommon.alert(`Compra parcelada em ${n}x registrada com sucesso!`);
+            UICommon.alert(`Salvo parcelado em ${n}x! (1ª fatura em ${baseComp.slice(5,7)}/${baseComp.slice(0,4)})`);
         } else {
             await DB.add("lancamentos", {
-                data: dataIso, competencia: dataIso.substring(0, 7), item: itemDesc,
-                tipo, valor_cents: cents, categoria, conta, status, origem: 'manual',
-                hash: Services.contentHash(dataIso, itemDesc, tipo, categoria, conta, cents)
+                data: dataIso, competencia: baseComp, item: itemDesc,
+                tipo, valor_cents: cents, categoria, conta, status, origem: 'manual'
             });
-            UICommon.alert("Lançamento salvo com sucesso!");
+            UICommon.alert("Lançamento salvo!");
         }
         document.getElementById('form-novo').reset();
         document.getElementById('novo-parcelas-container').style.display = 'none';
