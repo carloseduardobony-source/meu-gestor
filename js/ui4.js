@@ -1,4 +1,4 @@
-// js/ui4.js - Conciliação Financeira
+// js/ui4.js - Conciliação Financeira Flexível
 const UI4 = {
     linhasExtrato: [],
 
@@ -28,27 +28,52 @@ const UI4 = {
         const linhas = texto.split('\n').filter(l => l.trim().length > 0);
         this.linhasExtrato = [];
 
-        for (let i = 1; i < linhas.length; i++) {
-            const colunas = linhas[i].split(sep);
-            if (colunas.length >= 3) {
-                const dataBr = colunas[0].trim(); 
-                const descricao = colunas[1].trim();
-                const valorCents = Services.parseBRL(colunas[2].trim());
+        const colData = parseInt(document.getElementById('conc-col-data').value) - 1;
+        const colDesc = parseInt(document.getElementById('conc-col-desc').value) - 1;
+        const colVal = parseInt(document.getElementById('conc-col-val').value) - 1;
+        const fmtData = document.getElementById('conc-fmt-data').value;
+        const maxCol = Math.max(colData, colDesc, colVal);
 
-                if (dataBr && !isNaN(valorCents)) {
-                    const [d, m, a] = dataBr.split('/');
-                    const dataIso = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        for (let i = 1; i < linhas.length; i++) { // Pula a linha de cabeçalho
+            const colunas = linhas[i].split(sep);
+            
+            if (colunas.length > maxCol) {
+                const dataRaw = colunas[colData].trim().replace(/"/g, ''); 
+                const descricao = colunas[colDesc].trim().replace(/"/g, '');
+                const valorCents = Services.parseBRL(colunas[colVal].trim().replace(/"/g, ''));
+
+                if (dataRaw && !isNaN(valorCents) && valorCents !== 0) {
+                    let dataIso = '';
                     
-                    this.linhasExtrato.push({
-                        data: dataIso,
-                        descricao: descricao.replace(/"/g, ''),
-                        valor_cents: valorCents,
-                        tipo: valorCents < 0 ? 'Despesa' : 'Receita',
-                        id_temp: i
-                    });
+                    if (fmtData === 'DMY') {
+                        // Trata DD/MM/AAAA ou DD-MM-AAAA
+                        const partes = dataRaw.split(/[\/\-]/); 
+                        if (partes.length === 3) {
+                            dataIso = `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+                        }
+                    } else {
+                        // Trata AAAA-MM-DD
+                        dataIso = dataRaw.substring(0, 10);
+                    }
+                    
+                    if(dataIso.length === 10) {
+                        this.linhasExtrato.push({
+                            data: dataIso,
+                            descricao: descricao,
+                            valor_cents: valorCents,
+                            tipo: valorCents < 0 ? 'Despesa' : 'Receita',
+                            id_temp: i
+                        });
+                    }
                 }
             }
         }
+        
+        if (this.linhasExtrato.length === 0) {
+            UICommon.alert("Nenhuma linha válida encontrada. Verifique se o separador e os números das colunas estão corretos para o seu banco.");
+            return;
+        }
+
         this.compararComBanco();
     },
 
@@ -79,7 +104,7 @@ const UI4 = {
             }
         }
 
-        document.getElementById('conc-resumo').innerText = `${this.linhasExtrato.length} registros. ${conciliados} conciliados. ${pendentes} para importar.`;
+        document.getElementById('conc-resumo').innerText = `${this.linhasExtrato.length} registros válidos lidos. ${conciliados} conciliados (já lançados). ${pendentes} aguardando importação.`;
         document.getElementById('conc-list').innerHTML = html;
     },
 
@@ -91,7 +116,10 @@ const UI4 = {
             document.getElementById('novo-valor').value = (Math.abs(ext.valor_cents) / 100).toFixed(2);
             document.getElementById('novo-tipo').value = ext.tipo;
             document.getElementById('novo-status').value = 'pago';
+            
+            // Marca o container como escondido para resetar no futuro e navega
             UICommon.showView('view-Novo_lancamento', 'Novo Lançamento');
+            UICommon.alert("Dados carregados! Escolha a categoria e a conta para salvar.");
         }
     }
 };
