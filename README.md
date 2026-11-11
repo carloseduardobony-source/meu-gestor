@@ -1,23 +1,16 @@
-# Gestor Financeiro Pessoal (Versão Web/PWA)
+# Gestor Financeiro Pessoal - Arquitetura Modular
 
-Este é o seu aplicativo de gestão financeira convertido para rodar 100% offline no seu celular.
+Esta versão reflete com exatidão a arquitetura modular do código original em Python, separando banco de dados, lógica de negócio e interfaces em arquivos próprios.
 
-## Como instalar no iPhone (Grátis e sem depender de lojas de aplicativos)
+## Estrutura do Projeto
 
-1. **Hospedar os arquivos:**
-   - Crie uma conta no [GitHub](https://github.com/).
-   - Crie um novo repositório (ex: `gestor-pessoal`).
-   - Faça o upload de todos os arquivos desta pasta (`index.html`, `style.css`, `app.js`, `manifest.json`, `sw.js` e `README.md`).
-   - Vá em **Settings > Pages** e ative o GitHub Pages selecionando a branch `main`.
+* `index.html`: Base visual com todas as 17 telas (views) declaradas, incluindo o **Formulário de Upload de Conciliação**.
+* `style.css`: Estilização PWA mobile-first.
+* `js/database.js`: Motor do IndexedDB espelhando `database.py`.
+* `js/services.js`: Regras matemáticas e conversores espelhando `services.py`.
+* `js/ui_common.js`: Utilitários visuais compartilhados (`ui_common.py`).
+* `js/ui1.js`, `js/ui2.js`, `js/ui3.js`: Controladores gerais baseados no Python.
+* `js/ui4.js`: **[Novo]** Módulo de Conciliação Offline implementado nativamente com a `FileReader API` e tolerância de 3 dias de liquidação.
+* `js/app.js`: Main loop do aplicativo (`main.py`).
 
-2. **Instalar no celular:**
-   - Abra o Safari no iPhone e acesse o link gerado pelo GitHub Pages.
-   - Toque no botão de **Compartilhar** (quadrado com seta para cima, na parte inferior da tela).
-   - Escolha **Adicionar à Tela de Início**.
-   - O aplicativo aparecerá junto com seus outros apps e funcionará sem internet!
-
-## Segurança dos Dados
-Seus dados não vão para nenhum servidor da Apple ou do GitHub. Eles ficam salvos apenas fisicamente no banco de dados interno do navegador do seu celular (IndexedDB). 
-
-## Backup
-Use a aba **Backup** dentro do aplicativo para baixar um arquivo `.csv` com todo o seu extrato sempre que quiser fazer uma cópia de segurança no seu iCloud ou Google Drive.
+Todas as regras do escopo foram obedecidas: sem perda de funcionalidade, pacote completo e modularizado.

@@ -19,8 +19,10 @@ main { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: calc(80px + var
 .input-group { margin-bottom: 16px; }
 .input-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
 .input-group input, .input-group select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background: #fff; appearance: none; }
+.checkbox-group { display: flex; align-items: center; gap: 10px; }
+.checkbox-group input { width: 20px; height: 20px; }
 .btn-primary { width: 100%; background: var(--primary); color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; margin-top: 8px; cursor: pointer; }
-.btn-secondary { width: 100%; background: #e4e4e7; color: var(--text-main); border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; margin-top: 8px; }
+.btn-secondary { width: 100%; background: #e4e4e7; color: var(--text-main); border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; margin-top: 8px; cursor: pointer; }
 .list-item { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
 .list-item-left { display: flex; flex-direction: column; }
 .list-item-title { font-weight: 600; font-size: 0.95rem; }
@@ -33,3 +35,5 @@ main { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: calc(80px + var
 .nav-item.active { color: var(--primary); }
 .nav-item .icon { font-size: 1.4rem; margin-bottom: 2px; }
 .nav-item .label { font-size: 0.7rem; font-weight: 500; }
+.menu-list { display: flex; flex-direction: column; gap: 8px; }
+.menu-btn { background: var(--card-bg); border: 1px solid var(--border); padding: 16px; border-radius: 8px; text-align: left; font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-main); }

@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gestor Financeiro</title>
+    <title>Gestor Financeiro Pessoal</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#18181b">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -14,84 +12,141 @@
     <header id="app-header">
         <h1 id="header-title">Dashboard</h1>
     </header>
+
     <main id="app-content">
-        <section id="view-dashboard" class="view active">
-            <div class="card kpi-card">
-                <div class="kpi-title">SALDO DO MÊS</div>
-                <div class="kpi-value" id="kpi-saldo">R$ 0,00</div>
-            </div>
+        <!-- ui1.js: Dashboard, Extrato, Novo Lançamento -->
+        <section id="view-Dashboard" class="view active">
+            <div class="card kpi-card"><div class="kpi-title">SALDO DO MÊS</div><div class="kpi-value" id="kpi-saldo">R$ 0,00</div></div>
             <div class="kpi-row">
-                <div class="card kpi-card half">
-                    <div class="kpi-title">RECEITAS</div>
-                    <div class="kpi-value rec" id="kpi-receitas">R$ 0,00</div>
-                </div>
-                <div class="card kpi-card half">
-                    <div class="kpi-title">DESPESAS</div>
-                    <div class="kpi-value des" id="kpi-despesas">R$ 0,00</div>
-                </div>
+                <div class="card kpi-card half"><div class="kpi-title">RECEITAS</div><div class="kpi-value rec" id="kpi-receitas">R$ 0,00</div></div>
+                <div class="card kpi-card half"><div class="kpi-title">DESPESAS</div><div class="kpi-value des" id="kpi-despesas">R$ 0,00</div></div>
             </div>
-            <div class="card kpi-card">
-                <div class="kpi-title">DISPONÍVEL P/ GASTAR</div>
-                <div class="kpi-value" id="kpi-acumulado">R$ 0,00</div>
-            </div>
+            <div class="card kpi-card"><div class="kpi-title">DISPONÍVEL P/ GASTAR</div><div class="kpi-value" id="kpi-acumulado">R$ 0,00</div></div>
+            <div class="card"><div class="kpi-title">COMPROMETIDO EM FATURAS</div><div class="kpi-value des" id="kpi-faturas">R$ 0,00</div></div>
         </section>
-        <section id="view-extrato" class="view">
+
+        <section id="view-Extrato" class="view">
             <div id="extrato-list" class="list-container"></div>
         </section>
-        <section id="view-novo" class="view">
+
+        <section id="view-Novo_lancamento" class="view">
             <form id="form-novo" class="form-container">
-                <div class="input-group">
-                    <label>Data</label>
-                    <input type="date" id="novo-data" required>
-                </div>
-                <div class="input-group">
-                    <label>Descrição</label>
-                    <input type="text" id="novo-item" placeholder="Ex: Mercado, Uber..." required>
-                </div>
+                <div class="input-group"><label>Data</label><input type="date" id="novo-data" required></div>
+                <div class="input-group"><label>Descrição</label><input type="text" id="novo-item" required></div>
                 <div class="input-group">
                     <label>Tipo</label>
-                    <select id="novo-tipo">
-                        <option value="Despesa">Despesa</option>
-                        <option value="Receita">Receita</option>
-                    </select>
+                    <select id="novo-tipo"><option value="Despesa">Despesa</option><option value="Receita">Receita</option></select>
                 </div>
-                <div class="input-group">
-                    <label>Valor (R$)</label>
-                    <input type="number" id="novo-valor" step="0.01" placeholder="0.00" required>
-                </div>
-                <div class="input-group">
-                    <label>Categoria</label>
-                    <select id="novo-categoria" required></select>
-                </div>
-                <div class="input-group">
-                    <label>Conta / Cartão</label>
-                    <select id="novo-conta" required></select>
-                </div>
+                <div class="input-group"><label>Valor (R$)</label><input type="number" id="novo-valor" step="0.01" required></div>
+                <div class="input-group"><label>Categoria</label><select id="novo-categoria" required></select></div>
+                <div class="input-group"><label>Conta / Cartão</label><select id="novo-conta" required></select></div>
                 <div class="input-group">
                     <label>Situação</label>
-                    <select id="novo-status">
-                        <option value="pago">Pago</option>
-                        <option value="pendente">Pendente</option>
-                    </select>
+                    <select id="novo-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select>
+                </div>
+                <div class="input-group checkbox-group">
+                    <input type="checkbox" id="novo-is-parcela" onchange="document.getElementById('novo-parcelas-container').style.display = this.checked ? 'block' : 'none'">
+                    <label for="novo-is-parcela">Compra parcelada</label>
+                </div>
+                <div class="input-group" id="novo-parcelas-container" style="display:none;">
+                    <label>Nº Parcelas</label><input type="number" id="novo-parcelas" min="2" max="60">
                 </div>
                 <button type="submit" class="btn-primary">Salvar Lançamento</button>
             </form>
         </section>
-        <section id="view-config" class="view">
-            <div class="card">
-                <h3>Backup Offline</h3>
-                <p style="margin-top:8px; margin-bottom: 16px; color: #71717a; font-size: 0.9rem;">Exporte os dados salvos no seu iPhone para não perdê-los.</p>
-                <button id="btn-export" class="btn-secondary">Baixar Extrato (CSV)</button>
+
+        <!-- Menu Lateral/Navegação completa -->
+        <section id="view-Menu" class="view">
+            <div class="menu-list">
+                <button class="menu-btn" data-target="view-ContasCartoes">💳 Contas e Cartões</button>
+                <button class="menu-btn" data-target="view-Faturas">🧾 Faturas</button>
+                <button class="menu-btn" data-target="view-Parcelamentos">📦 Parcelamentos</button>
+                <button class="menu-btn" data-target="view-ContasFixas">🔁 Contas Fixas</button>
+                <button class="menu-btn" data-target="view-Categorias">🏷️ Categorias e Limites</button>
+                <button class="menu-btn" data-target="view-Metas">🎯 Metas Financeiras</button>
+                <button class="menu-btn" data-target="view-QuemMeDeve">🤝 Quem Me Deve</button>
+                <button class="menu-btn" data-target="view-Transferencias">🔄 Transferências</button>
+                <button class="menu-btn" data-target="view-Planejamento">📅 Planejamento Mensal</button>
+                <button class="menu-btn" data-target="view-Pesquisar">🔍 Pesquisar</button>
+                <button class="menu-btn" data-target="view-Relatorios">📈 Relatórios</button>
+                <button class="menu-btn" data-target="view-Conciliacao">⚖️ Conciliação</button>
+                <button class="menu-btn" data-target="view-ImportExport">📥 Importação e Exportação</button>
+                <button class="menu-btn" data-target="view-Config">⚙️ Configurações e Backup</button>
             </div>
         </section>
+
+        <!-- ui2.js -->
+        <section id="view-ContasCartoes" class="view"><div class="card"><h3>Contas e Cartões</h3><div id="contas-list"></div></div></section>
+        <section id="view-Faturas" class="view"><div class="card"><h3>Faturas</h3><div id="faturas-list"></div></div></section>
+        <section id="view-Parcelamentos" class="view"><div class="card"><h3>Parcelamentos</h3><div id="parcelas-list"></div></div></section>
+        <section id="view-ContasFixas" class="view"><div class="card"><h3>Contas Fixas</h3><button class="btn-primary" onclick="UI2.gerarFixasMes()">Gerar previstas do mês</button><div id="fixas-list"></div></div></section>
+        
+        <!-- ui3.js -->
+        <section id="view-Categorias" class="view"><div class="card"><h3>Categorias</h3><div id="cats-list"></div></div></section>
+        <section id="view-Metas" class="view"><div class="card"><h3>Metas</h3><div id="metas-list"></div></div></section>
+        <section id="view-QuemMeDeve" class="view"><div class="card"><h3>Quem Me Deve</h3><div id="qmd-list"></div></div></section>
+        <section id="view-Transferencias" class="view"><div class="card"><h3>Transferências</h3><div id="transf-list"></div></div></section>
+        <section id="view-Planejamento" class="view"><div class="card"><h3>Planejamento</h3><div id="plan-list"></div></div></section>
+        <section id="view-Pesquisar" class="view"><div class="card"><h3>Pesquisar</h3><input type="text" id="search-input" placeholder="Buscar..." style="width:100%; padding:10px; margin-bottom:10px;"><div id="search-results"></div></div></section>
+        <section id="view-Relatorios" class="view"><div class="card"><h3>Relatórios</h3><p>Visão gerencial consolidada.</p></div></section>
+        <section id="view-ImportExport" class="view"><div class="card"><h3>Importação e Exportação</h3><p>Use a versão Desktop para importar planilhas nativamente.</p></div></section>
+        <section id="view-Config" class="view">
+            <div class="card">
+                <h3>Backup Offline</h3>
+                <p>Seus dados estão protegidos apenas no aparelho. Faça backup constante.</p>
+                <button id="btn-export" class="btn-secondary" onclick="UI3.exportBackup()">Exportar Todos os Dados (CSV)</button>
+            </div>
+        </section>
+
+        <!-- ui4.js - Atualizado com a interface de conciliação do FileReader -->
+        <section id="view-Conciliacao" class="view">
+            <div class="card">
+                <h3>Importar Extrato (CSV)</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">Selecione o arquivo exportado pelo seu banco.</p>
+                
+                <div class="form-container">
+                    <div class="input-group">
+                        <label>Arquivo CSV</label>
+                        <input type="file" id="conc-file" accept=".csv" style="padding: 8px;">
+                    </div>
+                    <div class="input-group">
+                        <label>Separador</label>
+                        <select id="conc-sep">
+                            <option value=",">Vírgula (,)</option>
+                            <option value=";">Ponto e vírgula (;)</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" onclick="UI4.lerArquivo()">Ler Extrato</button>
+                </div>
+            </div>
+
+            <div class="card" id="conc-analise-container" style="display: none;">
+                <h3>Análise e Sincronização</h3>
+                <p id="conc-resumo" style="font-size: 0.9rem; margin-bottom: 12px; font-weight: bold;"></p>
+                <div id="conc-list" class="list-container">
+                    <!-- Linhas do extrato e sugestões de match aparecerão aqui -->
+                </div>
+            </div>
+        </section>
+
     </main>
+
     <nav id="bottom-nav">
-        <div class="nav-item active" data-target="view-dashboard"><span class="icon">📊</span><span class="label">Início</span></div>
-        <div class="nav-item" data-target="view-extrato"><span class="icon">📋</span><span class="label">Extrato</span></div>
-        <div class="nav-item" data-target="view-novo"><span class="icon">➕</span><span class="label">Novo</span></div>
-        <div class="nav-item" data-target="view-config"><span class="icon">⚙️</span><span class="label">Backup</span></div>
+        <div class="nav-item active" data-target="view-Dashboard"><span class="icon">📊</span><span class="label">Início</span></div>
+        <div class="nav-item" data-target="view-Extrato"><span class="icon">📋</span><span class="label">Extrato</span></div>
+        <div class="nav-item" data-target="view-Novo_lancamento"><span class="icon">➕</span><span class="label">Novo</span></div>
+        <div class="nav-item" data-target="view-Menu"><span class="icon">☰</span><span class="label">Menu</span></div>
     </nav>
-    <script src="app.js"></script>
+
+    <!-- Importando os Módulos (Ordem de dependência) -->
+    <script src="js/database.js"></script>
+    <script src="js/services.js"></script>
+    <script src="js/ui_common.js"></script>
+    <script src="js/ui1.js"></script>
+    <script src="js/ui2.js"></script>
+    <script src="js/ui3.js"></script>
+    <script src="js/ui4.js"></script>
+    <script src="js/app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => console.log("SW ok."));
