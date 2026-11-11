@@ -13,15 +13,30 @@ const UI1 = {
 
     renderExtrato: async function() {
         let lancamentos = await DB.getAll("lancamentos");
+        
+        // Filtro de mês no extrato
+        let mesExtrato = document.getElementById('extrato-mes').value;
+        if (!mesExtrato) {
+            mesExtrato = new Date().toISOString().substring(0, 7);
+            document.getElementById('extrato-mes').value = mesExtrato;
+        }
+
+        lancamentos = lancamentos.filter(l => l.competencia === mesExtrato);
         lancamentos.sort((a, b) => b.data.localeCompare(a.data));
+        
         document.getElementById('extrato-list').innerHTML = lancamentos.map(l => `
             <div class="list-item">
                 <div class="list-item-left">
                     <span class="list-item-title">${l.item}</span>
                     <span class="list-item-sub">${l.data.split('-').reverse().join('/')} • ${l.categoria} • ${l.conta}</span>
+                    <span class="list-item-sub" style="color: ${l.status === 'pago' ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">[${l.status.toUpperCase()}]</span>
                 </div>
                 <div class="list-item-val ${l.tipo === 'Receita' ? 'rec' : 'des'}">
                     ${l.tipo === 'Receita' ? '+' : '-'}${Services.formatBRL(l.valor_cents)}
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-primary btn-small" onclick="UI5.abrirEdicao(${l.id})">Editar</button>
+                    <button class="btn-danger btn-small" onclick="UI5.excluirLancamento(${l.id})">Excluir</button>
                 </div>
             </div>
         `).join('');

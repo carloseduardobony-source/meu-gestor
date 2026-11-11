@@ -44,6 +44,30 @@ const DB = {
             req.onerror = () => reject(req.error);
         });
     },
+    
+    delete: function(storeName, id) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, "readwrite");
+            const req = tx.objectStore(storeName).delete(id);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    },
+    
+    update: function(storeName, id, newData) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, "readwrite");
+            const store = tx.objectStore(storeName);
+            const getReq = store.get(id);
+            getReq.onsuccess = () => {
+                const item = getReq.result;
+                const updatedItem = { ...item, ...newData };
+                const putReq = store.put(updatedItem);
+                putReq.onsuccess = () => resolve();
+                putReq.onerror = () => reject(putReq.error);
+            };
+        });
+    },
 
     seedData: async function() {
         const cats = await this.getAll("categorias");
