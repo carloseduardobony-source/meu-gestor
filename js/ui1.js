@@ -205,7 +205,7 @@ const UI1 = {
         const compManual = elComp ? elComp.value : '';
         const isParcela = document.getElementById('novo-is-parcela').checked;
         
-        // Base da competência: se o usuário escolheu manual, respeita a escolha; se deixou em branco, calcula pelo fechamento do cartão!
+        // Base da competência: se o usuário escolheu manual, respeita a escolha; se deixou em branco, calcula pelo fechamento caso seja cartão!
         const cartoesCadastrados = await DB.getAll("cartoes");
         let baseComp = compManual ? compManual : Services.calcularCompetenciaCartao(dataIso, conta, cartoesCadastrados, tipo);
         

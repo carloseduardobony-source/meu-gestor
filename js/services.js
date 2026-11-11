@@ -62,24 +62,20 @@ const Services = {
     getCompetencia: (dateIso) => String(dateIso || "").substring(0, 7),
 
     // Calcula a competência (mês da fatura) de uma compra respeitando o Dia de Fechamento do cartão.
-    // Regra: se dia da compra >= dia de fechamento, cai na fatura do mês seguinte; caso contrário, no mesmo mês.
+    // Regra: aplica SOMENTE se a conta for exatamente um cartão cadastrado (nunca afeta Conta Corrente como "Santander").
     calcularCompetenciaCartao: function(dataIso, nomeConta, cartoesList, tipo = "Despesa") {
         const compBase = this.getCompetencia(dataIso);
         if (!dataIso || dataIso.length < 10 || tipo !== "Despesa") return compBase;
         const contaStr = String(nomeConta || "").trim();
         if (!contaStr) return compBase;
 
-        const norm = (s) => String(s || "").toLowerCase().replace(/^cart[aã]o\s+/i, "").trim();
-        const alvo = norm(contaStr);
-        const isCardName = /^cart[aã]o/i.test(contaStr);
-
         let cartaoObj = null;
         if (Array.isArray(cartoesList)) {
-            cartaoObj = cartoesList.find(c => c.nome === contaStr || norm(c.nome) === alvo);
+            cartaoObj = cartoesList.find(c => c.nome.toLowerCase() === contaStr.toLowerCase());
         }
-        if (!cartaoObj && !isCardName) return compBase;
+        if (!cartaoObj) return compBase;
 
-        const diaFech = cartaoObj && cartaoObj.fechamento ? parseInt(cartaoObj.fechamento) : null;
+        const diaFech = cartaoObj.fechamento ? parseInt(cartaoObj.fechamento) : null;
         if (!diaFech || isNaN(diaFech)) return compBase;
 
         const diaCompra = parseInt(dataIso.substring(8, 10));

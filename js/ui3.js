@@ -270,12 +270,10 @@ const UI3 = {
 
             const lancamentosExistentes = await DB.getAll("lancamentos");
             const hashesSet = new Set(lancamentosExistentes.map(l => l.hash).filter(Boolean));
-            const contasExistentes = await DB.getAll("contas");
             const cartoesExistentes = await DB.getAll("cartoes");
-            const contasSet = new Set(contasExistentes.map(c => c.nome));
+            const contasSet = new Set((await DB.getAll("contas")).map(c => c.nome));
             const cartoesSet = new Set(cartoesExistentes.map(c => c.nome));
             const catsSet = new Set((await DB.getAll("categorias")).map(c => c.nome));
-            const normCard = (s) => String(s || "").toLowerCase().replace(/^cart[aã]o\s+/i, "").trim();
 
             let novos = 0, repetidos = 0, rejeitados = 0;
 
@@ -293,8 +291,7 @@ const UI3 = {
                     const cartaoRaw = Services.normalizaCaso(cols[8]);
                     const contaRaw = Services.normalizaCaso(cols[7]);
                     if (cartaoRaw) {
-                        const matchCard = cartoesExistentes.find(c => normCard(c.nome) === normCard(cartaoRaw));
-                        conta = matchCard ? matchCard.nome : (cartaoRaw.toLowerCase().startsWith("cart") ? cartaoRaw : `Cartão ${cartaoRaw}`);
+                        conta = cartaoRaw.toLowerCase().startsWith("cart") ? cartaoRaw : `Cartão ${cartaoRaw}`;
                     } else if (contaRaw) {
                         conta = contaRaw;
                     }
@@ -335,7 +332,7 @@ const UI3 = {
                     await DB.add("categorias", { nome: categoria, limite_cents: 30000 });
                     catsSet.add(categoria);
                 }
-                if (conta.toLowerCase().startsWith("cartão") || conta.toLowerCase().startsWith("cartao") || cartoesExistentes.some(c => normCard(c.nome) === normCard(conta))) {
+                if (conta.toLowerCase().startsWith("cartão") || conta.toLowerCase().startsWith("cartao")) {
                     if (!cartoesSet.has(conta)) {
                         const novoCartao = { nome: conta, conta_pagto: "Conta Corrente", limite_cents: 500000, fechamento: 10, vencimento: 17, ativo: 1 };
                         await DB.add("cartoes", novoCartao);
