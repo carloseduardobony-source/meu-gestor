@@ -1,8 +1,93 @@
 // js/ui1.js - Dashboard Completo (Logos, Gráficos, Barras, Alertas), Extrato e Novo Lançamento
 const UI1 = {
     dashMesAtual: new Date().toISOString().substring(0, 7),
+    _autoProcessado: false,
+
+    processarUrlAuto: async function() {
+        if (this._autoProcessado) return;
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('auto') !== '1') return;
+        this._autoProcessado = true;
+
+        try {
+            const rawData = (params.get('data') || '').trim();
+            let dataIso = new Date().toISOString().split('T')[0];
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawData)) {
+                const [d, m, y] = rawData.split('/');
+                dataIso = `${y}-${m}-${d}`;
+            } else if (/^\d{2}\/\d{2}\/\d{2}$/.test(rawData)) {
+                const [d, m, y] = rawData.split('/');
+                dataIso = `20${y}-${m}-${d}`;
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(rawData)) {
+                dataIso = rawData;
+            }
+
+            const valorStr = params.get('valor') || '0';
+            const valorCents = Math.abs(Services.parseBRL(valorStr));
+            if (valorCents <= 0) return;
+
+            const tipoRaw = (params.get('tipo') || 'Despesa').trim();
+            const tipo = tipoRaw.toLowerCase().includes('receit') ? 'Receita' : 'Despesa';
+            const conta = (params.get('conta') || 'Santander').trim();
+            const item = (params.get('item') || 'Notificação Santander').trim();
+            const categoria = (params.get('cat') || (tipo === 'Receita' ? 'Outras Receitas' : 'Outros')).trim();
+
+            // Limpa a URL imediatamente para evitar duplicação caso o usuário recarregue a página
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+
+            // Garante que a categoria e conta/cartão existam
+            const cats = await DB.getAll("categorias");
+            if (categoria && !cats.some(c => c.nome.toLowerCase() === categoria.toLowerCase())) {
+                await DB.add("categorias", { nome: categoria, limite_cents: 30000 });
+            }
+
+            let cartoes = await DB.getAll("cartoes");
+            const contas = await DB.getAll("contas");
+            if (/^cart[aã]o/i.test(conta)) {
+                if (!cartoes.some(c => c.nome.toLowerCase() === conta.toLowerCase())) {
+                    const novoC = { nome: conta, conta_pagto: "Santander", limite_cents: 500000, fechamento: 2, vencimento: 9, ativo: 1 };
+                    await DB.add("cartoes", novoC);
+                    cartoes.push(novoC);
+                }
+            } else if (conta && !contas.some(c => c.nome.toLowerCase() === conta.toLowerCase())) {
+                await DB.add("contas", { nome: conta, tipo: "Conta", saldo_inicial_cents: 0, ativa: 1 });
+            }
+
+            // Calcula a competência respeitando o fechamento se for cartão
+            const compCalc = Services.calcularCompetenciaCartao(dataIso, conta, cartoes, tipo);
+            const isCard = cartoes.some(c => c.nome.toLowerCase() === conta.toLowerCase()) || /^cart[aã]o/i.test(conta);
+            const statusPadrao = isCard ? 'pendente' : 'pago';
+
+            const novoId = await DB.add("lancamentos", {
+                data: dataIso,
+                competencia: compCalc,
+                item: item,
+                tipo: tipo,
+                categoria: categoria,
+                conta: conta,
+                valor_cents: valorCents,
+                status: statusPadrao,
+                origem: 'auto'
+            });
+
+            UICommon.alert(`✅ Lançamento automático salvo: ${item} (${Services.formatBRL(valorCents)}) em ${Services.fmtData(dataIso)}!`);
+
+            // Atualiza a tela e abre o Extrato na competência do lançamento
+            const elExtratoMes = document.getElementById('extrato-mes');
+            if (elExtratoMes) elExtratoMes.value = compCalc;
+            await this.renderDashboard(compCalc);
+            await this.renderExtrato();
+        } catch (err) {
+            console.error("Erro ao processar lançamento automático:", err);
+        }
+    },
 
     renderDashboard: async function(compOverride) {
+        if (!this._autoProcessado && window.location.search.includes('auto=1')) {
+            await this.processarUrlAuto();
+            return;
+        }
         if (compOverride) this.dashMesAtual = compOverride;
         const comp = this.dashMesAtual;
 

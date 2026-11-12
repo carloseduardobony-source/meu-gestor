@@ -138,6 +138,12 @@ const UI5 = {
         if (document.getElementById('edit-competencia')) {
             document.getElementById('edit-competencia').value = lan.competencia || lan.data.substring(0, 7);
         }
+        const chkParc = document.getElementById('edit-is-parcela');
+        const contParc = document.getElementById('edit-parcelas-container');
+        const numParc = document.getElementById('edit-parcelas');
+        if (chkParc) chkParc.checked = false;
+        if (contParc) contParc.style.display = 'none';
+        if (numParc) numParc.value = 2;
         
         document.getElementById('edit-modal').style.display = 'flex';
     },
@@ -153,6 +159,59 @@ const UI5 = {
         const novoValor = Math.abs(Services.parseBRL(document.getElementById('edit-valor').value));
         const novoStatus = document.getElementById('edit-status').value;
         const novoItem = document.getElementById('edit-item').value;
+
+        const chkParc = document.getElementById('edit-is-parcela');
+        const converterEmParcelado = chkParc && chkParc.checked;
+
+        if (converterEmParcelado) {
+            const n = Math.max(2, parseInt(document.getElementById('edit-parcelas').value || 2));
+            const parcelasVals = Services.splitParcelas(novoValor, n);
+            const itemLimpo = novoItem.replace(/\s*\(\d+\s*(?:de|\/)\s*\d+\)\s*$/i, '').trim();
+
+            // Se o usuário não alterou manualmente a competência mas trocou para um cartão, garante a competência base correta
+            const cartoesCadastrados = await DB.getAll("cartoes");
+            const compInicial = (elComp && elComp.value) ? elComp.value : Services.calcularCompetenciaCartao(novaData, novaConta, cartoesCadastrados, novoTipo);
+
+            const grupoId = await DB.add("grupos_parc", {
+                descricao: itemLimpo,
+                total_cents: novoValor,
+                n: n,
+                data_compra: novaData,
+                conta: novaConta,
+                categoria: novaCat
+            });
+
+            let [anoData, mesData, diaData] = novaData.split('-').map(Number);
+            for (let i = 0; i < n; i++) {
+                let pDate = new Date(anoData, (mesData - 1) + i, diaData);
+                let pDateIso = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}-${String(pDate.getDate()).padStart(2, '0')}`;
+                let compParcela = Services.addMonths(compInicial, i);
+
+                await DB.add("lancamentos", {
+                    data: pDateIso,
+                    competencia: compParcela,
+                    item: `${itemLimpo} (${i + 1} de ${n})`,
+                    tipo: novoTipo,
+                    valor_cents: parcelasVals[i],
+                    categoria: novaCat,
+                    conta: novaConta,
+                    status: novoStatus,
+                    origem: 'parcela',
+                    grupo_id: grupoId,
+                    numero: i + 1
+                });
+            }
+
+            // Remove o lançamento único original que foi convertido em parcelado
+            await DB.delete("lancamentos", id);
+
+            document.getElementById('edit-modal').style.display = 'none';
+            UICommon.alert(`Compra dividida em ${n}x com sucesso! (1ª fatura em ${compInicial.slice(5,7)}/${compInicial.slice(0,4)})`);
+            UI1.renderExtrato();
+            this.pesquisar();
+            UI1.renderDashboard();
+            return;
+        }
 
         const lancamentos = await DB.getAll("lancamentos");
         const lanAtual = lancamentos.find(l => Number(l.id) === Number(id));
