@@ -436,6 +436,14 @@
             <div class="input-group"><label>Conta / Cartão</label><select id="edit-conta"></select></div>
             <div class="input-group"><label>Situação</label><select id="edit-status"><option value="pago">Pago</option><option value="pendente">Pendente</option></select></div>
             <div class="input-group"><label>Mês da Fatura (Competência)</label><input type="month" id="edit-competencia"></div>
+            <div class="checkbox-group" id="edit-is-parcela-group" style="margin-top: 10px;">
+                <input type="checkbox" id="edit-is-parcela" onchange="document.getElementById('edit-parcelas-container').style.display = this.checked ? 'block' : 'none'">
+                <label for="edit-is-parcela">Compra parcelada (dividir em meses)</label>
+            </div>
+            <div class="input-group" id="edit-parcelas-container" style="display:none; margin-top: 8px;">
+                <label>Nº de Parcelas</label>
+                <input type="number" id="edit-parcelas" min="2" max="72" value="2">
+            </div>
             <div class="row-2" style="margin-top:14px;">
                 <button class="btn-primary" onclick="UI5.salvarEdicao()">Salvar</button>
                 <button class="btn-secondary" onclick="document.getElementById('edit-modal').style.display='none'">Cancelar</button>
