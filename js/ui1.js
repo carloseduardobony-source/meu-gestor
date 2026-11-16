@@ -3,6 +3,163 @@ const UI1 = {
     dashMesAtual: new Date().toISOString().substring(0, 7),
     _autoProcessado: false,
 
+    // Processa linhas no formato: DataBR|Valor|Tipo|Conta|Descricao|Categoria (ou texto direto da notificação do Santander)
+    processarTextoFila: async function(textoBruto, limparClipboard = false) {
+        if (!textoBruto || !String(textoBruto).trim()) return 0;
+        const linhas = String(textoBruto).replace(/^\uFEFF/, '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (!linhas.length) return 0;
+
+        const lancamentosExistentes = await DB.getAll("lancamentos");
+        const hashesSet = new Set(lancamentosExistentes.map(l => l.hash).filter(Boolean));
+        let cartoes = await DB.getAll("cartoes");
+        const contas = await DB.getAll("contas");
+        const cats = await DB.getAll("categorias");
+
+        let adicionados = 0;
+        let repetidos = 0;
+        let ultimaComp = null;
+
+        for (const linha of linhas) {
+            let rawData = "", valorStr = "", tipoRaw = "Despesa", conta = "Santander", item = "", categoria = "";
+
+            // Formato 1: Linha estruturada pela Fila do Atalho: DataBR|Valor|Tipo|Conta|Descricao|Categoria
+            if (linha.includes('|')) {
+                const partes = linha.split('|').map(p => p.trim());
+                if (partes.length < 5) continue;
+                const p0 = partes[0] === 'AUTO_FIN' ? partes.slice(1) : partes;
+                rawData = p0[0] || '';
+                valorStr = p0[1] || '0';
+                tipoRaw = p0[2] || 'Despesa';
+                conta = p0[3] || 'Santander';
+                item = p0[4] || 'Notificação Santander';
+                categoria = p0[5] || '';
+            } else {
+                // Formato 2: Frase bruta do Santander colada diretamente
+                const mPixEnv = linha.match(/^PIX enviado em (\d{2}\/\d{2}\/\d{4}) [àa]s \d{2}:\d{2} no valor de R\$\s*([\d\.,]+)\.?$/i);
+                const mPixRec = linha.match(/^PIX recebido em (\d{2}\/\d{2}\/\d{4}) [àa]s \d{2}:\d{2} no valor de R\$\s*([\d\.,]+)\.?$/i);
+                const mCompra = linha.match(/^Compra no cart[ãa]o final \d{4}, de R\$\s*([\d\.,]+), em (\d{2}\/\d{2}\/\d{2,4}), [àa]s \d{2}:\d{2}, em (.+?), aprovada\.?$/i);
+
+                if (mPixEnv) {
+                    rawData = mPixEnv[1]; valorStr = mPixEnv[2]; tipoRaw = 'Despesa'; conta = 'Santander'; item = 'PIX Enviado'; categoria = 'Outros';
+                } else if (mPixRec) {
+                    rawData = mPixRec[1]; valorStr = mPixRec[2]; tipoRaw = 'Receita'; conta = 'Santander'; item = 'PIX Recebido'; categoria = 'Outras Receitas';
+                } else if (mCompra) {
+                    valorStr = mCompra[1]; rawData = mCompra[2]; item = mCompra[3].trim(); tipoRaw = 'Despesa'; conta = 'Cartão Santander'; categoria = 'Outros';
+                } else {
+                    continue;
+                }
+            }
+
+            let dataIso = "";
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawData)) {
+                const [d, m, y] = rawData.split('/');
+                dataIso = `${y}-${m}-${d}`;
+            } else if (/^\d{2}\/\d{2}\/\d{2}$/.test(rawData)) {
+                const [d, m, y] = rawData.split('/');
+                dataIso = `20${y}-${m}-${d}`;
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(rawData)) {
+                dataIso = rawData;
+            } else {
+                continue;
+            }
+
+            const valorCents = Math.abs(Services.parseBRL(valorStr));
+            if (valorCents <= 0) continue;
+
+            const tipo = tipoRaw.toLowerCase().includes('receit') ? 'Receita' : 'Despesa';
+            if (!categoria) categoria = tipo === 'Receita' ? 'Outras Receitas' : 'Outros';
+
+            const h = Services.contentHash(dataIso, item, tipo, categoria, conta, valorCents);
+            if (hashesSet.has(h)) {
+                repetidos++;
+                continue;
+            }
+            hashesSet.add(h);
+
+            if (categoria && !cats.some(c => c.nome.toLowerCase() === categoria.toLowerCase())) {
+                const novaCat = { nome: categoria, limite_cents: 30000 };
+                await DB.add("categorias", novaCat);
+                cats.push(novaCat);
+            }
+
+            if (/^cart[aã]o/i.test(conta)) {
+                if (!cartoes.some(c => c.nome.toLowerCase() === conta.toLowerCase())) {
+                    const novoC = { nome: conta, conta_pagto: "Santander", limite_cents: 500000, fechamento: 2, vencimento: 9, ativo: 1 };
+                    await DB.add("cartoes", novoC);
+                    cartoes.push(novoC);
+                }
+            } else if (conta && !contas.some(c => c.nome.toLowerCase() === conta.toLowerCase())) {
+                const novaConta = { nome: conta, tipo: "Conta", saldo_inicial_cents: 0, ativa: 1 };
+                await DB.add("contas", novaConta);
+                contas.push(novaConta);
+            }
+
+            const compCalc = Services.calcularCompetenciaCartao(dataIso, conta, cartoes, tipo);
+            ultimaComp = compCalc;
+            const isCard = cartoes.some(c => c.nome.toLowerCase() === conta.toLowerCase()) || /^cart[aã]o/i.test(conta);
+            const statusPadrao = isCard ? 'pendente' : 'pago';
+
+            await DB.add("lancamentos", {
+                data: dataIso,
+                competencia: compCalc,
+                item: item,
+                tipo: tipo,
+                categoria: categoria,
+                conta: conta,
+                valor_cents: valorCents,
+                status: statusPadrao,
+                origem: 'auto',
+                hash: h
+            });
+            adicionados++;
+        }
+
+        if (adicionados > 0) {
+            if (limparClipboard && navigator.clipboard && navigator.clipboard.writeText) {
+                try { await navigator.clipboard.writeText(""); } catch (e) {}
+            }
+            UICommon.alert(`✅ ${adicionados} lançamento(s) da fila importado(s) com sucesso!${repetidos > 0 ? ` (${repetidos} já existente(s) ignorado(s))` : ''}`);
+            if (ultimaComp) {
+                const elExtratoMes = document.getElementById('extrato-mes');
+                if (elExtratoMes) elExtratoMes.value = ultimaComp;
+            }
+            await this.renderDashboard(ultimaComp || this.dashMesAtual);
+            await this.renderExtrato();
+        } else if (repetidos > 0) {
+            UICommon.alert(`ℹ️ Todos os ${repetidos} lançamento(s) da fila já estavam salvos no app.`);
+        } else {
+            UICommon.alert("Nenhum lançamento válido encontrado na fila.");
+        }
+        return adicionados;
+    },
+
+    colarFilaAreaTransferencia: async function() {
+        try {
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                const txt = await navigator.clipboard.readText();
+                if (txt && txt.trim()) {
+                    await this.processarTextoFila(txt, true);
+                    return;
+                }
+            }
+        } catch (e) {}
+        const manual = prompt("Cole aqui o conteúdo da fila ou notificação do Santander:");
+        if (manual && manual.trim()) {
+            await this.processarTextoFila(manual, false);
+        }
+    },
+
+    importarArquivoFila: function(inputEl) {
+        if (!inputEl.files || !inputEl.files.length) return;
+        const file = inputEl.files[0];
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            await this.processarTextoFila(e.target.result, false);
+            inputEl.value = '';
+        };
+        reader.readAsText(file);
+    },
+
     processarUrlAuto: async function() {
         if (this._autoProcessado) return;
         const params = new URLSearchParams(window.location.search);
