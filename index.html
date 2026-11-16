@@ -11,7 +11,12 @@
 <body>
     <header id="app-header">
         <h1 id="header-title">Dashboard</h1>
-        <button class="pill no-print" onclick="window.print()" style="font-size:0.72rem;padding:4px 10px;">🖨️ PDF</button>
+        <div class="no-print" style="display:flex;gap:6px;align-items:center;">
+            <input type="file" id="fila-txt-input" accept=".txt,.csv,text/plain" style="display:none;" onchange="UI1.importarArquivoFila(this)">
+            <button class="pill" onclick="UI1.colarFilaAreaTransferencia()" title="Colar notificações da Área de Transferência" style="font-size:0.72rem;padding:4px 10px;">📋 Colar Fila</button>
+            <button class="pill" onclick="document.getElementById('fila-txt-input').click()" title="Carregar fila_lancamentos.txt do iCloud" style="font-size:0.72rem;padding:4px 10px;">📥 Fila .txt</button>
+            <button class="pill" onclick="window.print()" style="font-size:0.72rem;padding:4px 10px;">🖨️ PDF</button>
+        </div>
     </header>
 
     <main id="app-content">
@@ -466,17 +471,17 @@
     </div>
 
     <!-- Módulos JS -->
-    <script src="js/logos.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/database.js"></script>
-    <script src="js/services.js"></script>
-    <script src="js/ui_common.js"></script>
-    <script src="js/ui1.js"></script>
-    <script src="js/ui2.js"></script>
-    <script src="js/ui3.js"></script>
-    <script src="js/ui4.js"></script>
-    <script src="js/ui5.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/logos.js?v=8"></script>
+    <script src="js/charts.js?v=8"></script>
+    <script src="js/database.js?v=8"></script>
+    <script src="js/services.js?v=8"></script>
+    <script src="js/ui_common.js?v=8"></script>
+    <script src="js/ui1.js?v=8"></script>
+    <script src="js/ui2.js?v=8"></script>
+    <script src="js/ui3.js?v=8"></script>
+    <script src="js/ui4.js?v=8"></script>
+    <script src="js/ui5.js?v=8"></script>
+    <script src="js/app.js?v=8"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => console.log("SW v7 ativo."));
