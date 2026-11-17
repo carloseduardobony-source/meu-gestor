@@ -1095,3 +1095,148 @@ details.det summary::-webkit-details-marker {
         background: #ffffff;
     }
 }
+
+
+/* Botões de Ação Direta no Menu Mais (Colar Fila, Fila .txt, PDF) */
+.menu-btn-action {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-light);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-main);
+    text-align: left;
+    cursor: pointer;
+    position: relative;
+}
+
+.menu-btn-action:active {
+    background: #f8fafc;
+}
+
+.menu-btn-action::after {
+    content: "›";
+    margin-left: auto;
+    font-size: 1.35rem;
+    color: #94a3b8;
+    font-weight: 400;
+    line-height: 1;
+}
+
+/* =========================================================
+   GRÁFICO DE BARRAS VERTICAIS ARREDONDADAS (3 MESES)
+   ========================================================= */
+.bar-chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+}
+
+.bar-chart-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.leg-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.leg-dot.rec { background: var(--success); }
+.leg-dot.des { background: var(--danger); }
+.leg-dot.fat { background: var(--accent-blue); }
+
+.bar-chart-stage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    align-items: end;
+    padding: 6px 4px 2px 4px;
+}
+
+.bar-month-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 6px 8px 6px;
+    border-radius: 16px;
+    transition: background 0.15s;
+}
+
+.bar-month-group.current {
+    background: #f8fafc;
+    border: 1px solid var(--border-light);
+}
+
+.bar-triplet {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    height: 138px;
+    width: 100%;
+}
+
+.bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    flex: 1;
+    max-width: 24px;
+}
+
+.bar-val-top {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-bottom: 4px;
+    min-height: 12px;
+}
+
+.bar-track {
+    width: 14px;
+    height: 112px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+
+.bar-fill {
+    width: 100%;
+    border-radius: 999px;
+    transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bar-fill.rec { background: var(--success); }
+.bar-fill.des { background: var(--danger); }
+.bar-fill.fat { background: var(--accent-blue); }
+
+.bar-month-label {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: lowercase;
+}
+
+.bar-month-group.current .bar-month-label {
+    color: var(--text-main);
+    font-weight: 800;
+}
