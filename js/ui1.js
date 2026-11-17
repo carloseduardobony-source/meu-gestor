@@ -1,7 +1,195 @@
-// js/ui1.js - Dashboard Completo (Logos, Gráficos, Barras, Alertas), Extrato e Novo Lançamento
+// js/ui1.js - Dashboard Completo (Layout Fintech Moderno, Logos, Gráficos, Barras, Alertas), Extrato Agrupado e Menu Radial (+)
 const UI1 = {
     dashMesAtual: new Date().toISOString().substring(0, 7),
     _autoProcessado: false,
+    filtroTipoExtrato: 'todas',
+    ultimaViewPrincipal: 'view-Dashboard',
+
+    MESES_NOMES: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+
+    formatarMesExtenso: function(compIso) {
+        if (!compIso || compIso.length < 7) return '';
+        const [y, m] = compIso.split('-').map(Number);
+        const nome = this.MESES_NOMES[(m - 1) % 12] || '';
+        return `${nome} ${y}`;
+    },
+
+    formatarDataCurta: function(dataIso) {
+        if (!dataIso || dataIso.length < 10) return '';
+        const [y, m, d] = dataIso.substring(0, 10).split('-').map(Number);
+        const mesesCurtos = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const hoje = new Date().toISOString().split('T')[0];
+        if (dataIso === hoje) return `Hoje • ${String(d).padStart(2, '0')} de ${mesesCurtos[(m - 1) % 12]}`;
+        return `${String(d).padStart(2, '0')} de ${mesesCurtos[(m - 1) % 12]}`;
+    },
+
+    iconeCategoria: function(catNome, tipo) {
+        const c = String(catNome || '').toLowerCase();
+        if (tipo === 'Receita') return '💰';
+        if (c.includes('aliment') || c.includes('mercad') || c.includes('ifd') || c.includes('restaur') || c.includes('lanch')) return '🍴';
+        if (c.includes('transp') || c.includes('uber') || c.includes('combust') || c.includes('gasol') || c.includes('pedag')) return '🚗';
+        if (c.includes('morad') || c.includes('alug') || c.includes('casa') || c.includes('luz') || c.includes('agua') || c.includes('internet')) return '🏠';
+        if (c.includes('saud') || c.includes('saúd') || c.includes('farm') || c.includes('med')) return '🩺';
+        if (c.includes('lazer') || c.includes('viag') || c.includes('bar') || c.includes('passeio')) return '⭐';
+        if (c.includes('educ') || c.includes('curso') || c.includes('facul')) return '📚';
+        if (c.includes('assinat') || c.includes('stream') || c.includes('apple') || c.includes('spotify')) return '📱';
+        if (c.includes('roupa') || c.includes('vestu')) return '👕';
+        return '🛍️';
+    },
+
+    togglePrivacy: function() {
+        document.body.classList.toggle('privacy-mode');
+        const eye = document.getElementById('eye-icon');
+        if (eye) {
+            eye.innerText = document.body.classList.contains('privacy-mode') ? '🙈' : '👁️';
+        }
+    },
+
+    mudarMesDash: function(delta) {
+        const novoMes = Services.addMonths(this.dashMesAtual, delta);
+        this.renderDashboard(novoMes);
+    },
+
+    mudarMesExtrato: function(delta) {
+        const el = document.getElementById('extrato-mes');
+        const atual = (el && el.value) ? el.value : this.dashMesAtual;
+        const novo = Services.addMonths(atual, delta);
+        if (el) el.value = novo;
+        this.renderExtrato();
+    },
+
+    filtrarTipoExtrato: function(filtro, btnEl) {
+        this.filtroTipoExtrato = filtro;
+        document.querySelectorAll('.extrato-tab').forEach(b => b.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+        this.renderExtrato();
+    },
+
+    irParaExtratoFiltro: function(tipo) {
+        this.filtroTipoExtrato = tipo;
+        document.querySelectorAll('.extrato-tab').forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-flt') === tipo);
+        });
+        const elMes = document.getElementById('extrato-mes');
+        if (elMes) elMes.value = this.dashMesAtual;
+        this.navegarPara('view-Extrato', 'Transações');
+    },
+
+    // ---- MENU RADIAL FLUTUANTE (+) ----
+    abrirMenuRapido: function() {
+        const ov = document.getElementById('fab-overlay');
+        if (ov) ov.classList.add('open');
+    },
+
+    fecharMenuRapido: function() {
+        const ov = document.getElementById('fab-overlay');
+        if (ov) ov.classList.remove('open');
+    },
+
+    acaoRapidaFab: async function(acao) {
+        this.fecharMenuRapido();
+        if (acao === 'transferir') {
+            this.navegarPara('view-Transferencias', 'Transferências');
+            return;
+        }
+        if (acao === 'caixinha') {
+            this.navegarPara('view-Metas', 'Metas e Caixinhas');
+            return;
+        }
+
+        // Abre Novo Lançamento pré-configurado
+        await this.populateNovoLancamento();
+        const elTipo = document.getElementById('novo-tipo');
+        const elConta = document.getElementById('novo-conta');
+        const elStatus = document.getElementById('novo-status');
+
+        if (acao === 'receita') {
+            if (elTipo) elTipo.value = 'Receita';
+            if (elStatus) elStatus.value = 'pago';
+            this.navegarPara('view-Novo_lancamento', 'Nova Receita');
+        } else if (acao === 'cartao') {
+            if (elTipo) elTipo.value = 'Despesa';
+            if (elStatus) elStatus.value = 'pendente';
+            const cartoes = await DB.getAll('cartoes');
+            if (cartoes.length && elConta) {
+                elConta.value = cartoes[0].nome;
+            }
+            this.navegarPara('view-Novo_lancamento', 'Despesa Cartão');
+        } else {
+            if (elTipo) elTipo.value = 'Despesa';
+            if (elStatus) elStatus.value = 'pago';
+            const contas = await DB.getAll('contas');
+            if (contas.length && elConta) {
+                elConta.value = contas[0].nome;
+            }
+            this.navegarPara('view-Novo_lancamento', 'Nova Despesa');
+        }
+    },
+
+    // ---- NAVEGAÇÃO FLUIDA E BOTÃO VOLTAR ----
+    onNavClick: function(viewId, titulo, navEl) {
+        this.ultimaViewPrincipal = viewId;
+        this.navegarPara(viewId, titulo, navEl);
+    },
+
+    voltarNavegacao: function() {
+        const destino = this.ultimaViewPrincipal || 'view-Menu';
+        const titulos = {
+            'view-Dashboard': 'Início',
+            'view-Extrato': 'Transações',
+            'view-Relatorios': 'Análise',
+            'view-Menu': 'Mais'
+        };
+        this.navegarPara(destino, titulos[destino] || 'Início');
+    },
+
+    navegarPara: function(viewId, titulo, navEl) {
+        if (typeof UICommon !== 'undefined' && UICommon.showView) {
+            UICommon.showView(viewId, titulo);
+        } else {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById(viewId);
+            if (target) target.classList.add('active');
+            const hTitle = document.getElementById('header-title');
+            if (hTitle && titulo) hTitle.innerText = titulo;
+        }
+
+        const hTitle = document.getElementById('header-title');
+        if (hTitle && titulo) hTitle.innerText = titulo;
+
+        // Atualiza destaque na barra inferior
+        const principais = ['view-Dashboard', 'view-Extrato', 'view-Relatorios', 'view-Menu'];
+        document.querySelectorAll('#bottom-nav .nav-item').forEach(item => {
+            item.classList.toggle('active', item.getAttribute('data-target') === viewId);
+        });
+
+        // Exibe botão voltar (‹) se estiver em uma sub-tela
+        const btnBack = document.getElementById('btn-header-back');
+        if (btnBack) {
+            btnBack.style.display = principais.includes(viewId) ? 'none' : 'inline-flex';
+        }
+
+        // Aciona o renderizador correspondente da view
+        if (viewId === 'view-Dashboard') this.renderDashboard();
+        else if (viewId === 'view-Extrato') this.renderExtrato();
+        else if (viewId === 'view-Novo_lancamento') this.populateNovoLancamento();
+        else if (viewId === 'view-ContasCartoes' && typeof UI2 !== 'undefined') UI2.renderContasCartoes();
+        else if (viewId === 'view-Faturas' && typeof UI2 !== 'undefined') UI2.renderFaturas();
+        else if (viewId === 'view-Parcelamentos' && typeof UI2 !== 'undefined') UI2.renderParcelamentos();
+        else if (viewId === 'view-ContasFixas' && typeof UI2 !== 'undefined') UI2.renderFixas();
+        else if (viewId === 'view-Categorias' && typeof UI3 !== 'undefined') UI3.renderCategorias();
+        else if (viewId === 'view-Metas' && typeof UI3 !== 'undefined') UI3.renderMetas();
+        else if (viewId === 'view-QuemMeDeve' && typeof UI3 !== 'undefined') UI3.renderQuemMeDeve();
+        else if (viewId === 'view-Transferencias' && typeof UI3 !== 'undefined') UI3.renderTransferencias();
+        else if (viewId === 'view-Pesquisar' && typeof UI5 !== 'undefined') UI5.initPesquisa();
+        else if (viewId === 'view-Planejamento' && typeof UI5 !== 'undefined') UI5.renderPlanejamento();
+        else if (viewId === 'view-Relatorios' && typeof UI5 !== 'undefined') {
+            const rAno = document.getElementById('rel-ano');
+            if (rAno && !rAno.value) rAno.value = new Date().getFullYear();
+            UI5.gerarRelatorio();
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
 
     // Processa linhas no formato: DataBR|Valor|Tipo|Conta|Descricao|Categoria (ou texto direto da notificação do Santander)
     processarTextoFila: async function(textoBruto, limparClipboard = false) {
@@ -22,9 +210,8 @@ const UI1 = {
         for (const linha of linhas) {
             let rawData = "", valorStr = "", tipoRaw = "Despesa", conta = "Santander", item = "", categoria = "";
 
-            // Formato 1: Linha estruturada pela Fila do Atalho: DataBR|Valor|Tipo|Conta|Descricao|Categoria
             if (linha.includes('|')) {
-                const partes = linha.split('|').map(p => p.trim());
+                const partes = linha.split('|').map(p => p.trim().replace(/^[\[\]"']+|\[\]"']+$/g, '').replace(/^\[|\]$/g, '').trim());
                 if (partes.length < 5) continue;
                 const p0 = partes[0] === 'AUTO_FIN' ? partes.slice(1) : partes;
                 rawData = p0[0] || '';
@@ -34,10 +221,9 @@ const UI1 = {
                 item = p0[4] || 'Notificação Santander';
                 categoria = p0[5] || '';
             } else {
-                // Formato 2: Frase bruta do Santander colada diretamente
-                const mPixEnv = linha.match(/^PIX enviado em (\d{2}\/\d{2}\/\d{4}) [àa]s \d{2}:\d{2} no valor de R\$\s*([\d\.,]+)\.?$/i);
-                const mPixRec = linha.match(/^PIX recebido em (\d{2}\/\d{2}\/\d{4}) [àa]s \d{2}:\d{2} no valor de R\$\s*([\d\.,]+)\.?$/i);
-                const mCompra = linha.match(/^Compra no cart[ãa]o final \d{4}, de R\$\s*([\d\.,]+), em (\d{2}\/\d{2}\/\d{2,4}), [àa]s \d{2}:\d{2}, em (.+?), aprovada\.?$/i);
+                const mPixEnv = linha.match(/PIX enviado em (\d{2}\/\d{2}\/\d{4}) [àa]s \d{2}:\d{2} no valor de R\$\s*([\d\.,]+)/i);
+                const mPixRec = linha.match(/PIX recebido em (\d{2}\/\d{2}\/\d{4}) [àa]s \d{2}:\d{2} no valor de R\$\s*([\d\.,]+)/i);
+                const mCompra = linha.match(/Compra no cart[ãa]o final \d{4}, de R\$\s*([\d\.,]+), em (\d{2}\/\d{2}\/\d{2,4}), [àa]s \d{2}:\d{2}, em (.+?), aprovada/i);
 
                 if (mPixEnv) {
                     rawData = mPixEnv[1]; valorStr = mPixEnv[2]; tipoRaw = 'Despesa'; conta = 'Santander'; item = 'PIX Enviado'; categoria = 'Outros';
@@ -189,11 +375,9 @@ const UI1 = {
             const item = (params.get('item') || 'Notificação Santander').trim();
             const categoria = (params.get('cat') || (tipo === 'Receita' ? 'Outras Receitas' : 'Outros')).trim();
 
-            // Limpa a URL imediatamente para evitar duplicação caso o usuário recarregue a página
             const cleanUrl = window.location.origin + window.location.pathname;
             window.history.replaceState({}, document.title, cleanUrl);
 
-            // Garante que a categoria e conta/cartão existam
             const cats = await DB.getAll("categorias");
             if (categoria && !cats.some(c => c.nome.toLowerCase() === categoria.toLowerCase())) {
                 await DB.add("categorias", { nome: categoria, limite_cents: 30000 });
@@ -211,12 +395,11 @@ const UI1 = {
                 await DB.add("contas", { nome: conta, tipo: "Conta", saldo_inicial_cents: 0, ativa: 1 });
             }
 
-            // Calcula a competência respeitando o fechamento se for cartão
             const compCalc = Services.calcularCompetenciaCartao(dataIso, conta, cartoes, tipo);
             const isCard = cartoes.some(c => c.nome.toLowerCase() === conta.toLowerCase()) || /^cart[aã]o/i.test(conta);
             const statusPadrao = isCard ? 'pendente' : 'pago';
 
-            const novoId = await DB.add("lancamentos", {
+            await DB.add("lancamentos", {
                 data: dataIso,
                 competencia: compCalc,
                 item: item,
@@ -230,7 +413,6 @@ const UI1 = {
 
             UICommon.alert(`✅ Lançamento automático salvo: ${item} (${Services.formatBRL(valorCents)}) em ${Services.fmtData(dataIso)}!`);
 
-            // Atualiza a tela e abre o Extrato na competência do lançamento
             const elExtratoMes = document.getElementById('extrato-mes');
             if (elExtratoMes) elExtratoMes.value = compCalc;
             await this.renderDashboard(compCalc);
@@ -247,6 +429,10 @@ const UI1 = {
         }
         if (compOverride) this.dashMesAtual = compOverride;
         const comp = this.dashMesAtual;
+
+        // Atualiza título do mês por extenso (< Novembro 2026 >)
+        const monthLbl = document.getElementById('dash-month-label');
+        if (monthLbl) monthLbl.innerText = this.formatarMesExtenso(comp);
 
         // Gera pílulas de meses (últimos 4, atual e próximos 3)
         const baseComp = new Date().toISOString().substring(0, 7);
@@ -278,21 +464,144 @@ const UI1 = {
         document.getElementById('kpi-fixas').innerText = `${d.fixasQtd} • ${Services.formatBRL(d.fixasTotal)}`;
         document.getElementById('kpi-parcelas').innerText = `${d.parcQtd} • ${Services.formatBRL(d.parcTotal)}`;
 
+        // Seção Contas no Dashboard (Estilo Vídeo)
+        const elDashContas = document.getElementById('dash-contas');
+        if (elDashContas) {
+            const contasList = await DB.getAll("contas");
+            if (contasList.length > 0) {
+                elDashContas.innerHTML = contasList.map((c, idx) => {
+                    const logoHtml = (typeof Logos !== 'undefined' && Logos.getLogoHTML) ? Logos.getLogoHTML(c.nome) : '🏦';
+                    const saldoExibido = idx === 0 ? d.disponivelGastar : (parseInt(c.saldo_inicial_cents) || 0);
+                    return `
+                        <div class="fintech-row">
+                            <div class="fintech-row-left">
+                                <div>${logoHtml}</div>
+                                <div>
+                                    <div class="fintech-row-title">${UICommon.esc(c.nome)}</div>
+                                    <div class="fintech-row-sub">Realizado em caixa</div>
+                                    ${idx === 0 && d.reservadoMetas > 0 ? `<div class="fintech-row-sub">Reservado</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="fintech-row-right">
+                                <div class="fintech-row-val priv-val" style="color:${saldoExibido >= 0 ? 'var(--text-main)' : 'var(--danger)'}">${Services.formatBRL(saldoExibido)}</div>
+                                <div class="fintech-row-sub priv-val">${Services.formatBRL(idx === 0 ? d.realizadoCaixa : saldoExibido)}</div>
+                                ${idx === 0 && d.reservadoMetas > 0 ? `<div class="fintech-row-sub priv-val">${Services.formatBRL(d.reservadoMetas)}</div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                elDashContas.innerHTML = '<div style="font-size:0.82rem;color:var(--text-muted);padding:4px 0;">Nenhuma conta cadastrada.</div>';
+            }
+        }
+
+        // Seção Caixinhas / Metas no Dashboard (Com Anel de Progresso Circular Igual ao Vídeo)
+        document.getElementById('dash-metas').innerHTML = d.metasCalc.map(m => {
+            const pct = m.objetivo_cents > 0 ? Math.min(100, Math.round((m.acumulado_cents / m.objetivo_cents) * 100)) : 0;
+            const icone = m.nome.toLowerCase().includes('viag') ? '✈️' : (m.nome.toLowerCase().includes('emerg') || m.nome.toLowerCase().includes('reserv') ? '🪙' : '🎯');
+            const corAnel = pct >= 100 ? '#10b981' : '#f59e0b';
+            return `
+                <div class="fintech-row">
+                    <div class="fintech-row-left">
+                        <div class="meta-ring" style="background: conic-gradient(${corAnel} ${pct * 3.6}deg, #e2e8f0 0deg);">
+                            <div class="meta-ring-inner">${icone}</div>
+                        </div>
+                        <div>
+                            <div class="fintech-row-title">${UICommon.esc(m.nome)}</div>
+                            <div class="fintech-row-sub">${pct}% concluído</div>
+                        </div>
+                    </div>
+                    <div class="fintech-row-right">
+                        <div class="fintech-row-val priv-val" style="color:var(--success)">${Services.formatBRL(m.acumulado_cents)}</div>
+                        <div class="fintech-row-sub priv-val">de ${Services.formatBRL(m.objetivo_cents)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nenhuma caixinha/meta cadastrada.</span>';
+
+        // Seção Cartões de Crédito com Logos SVG e Rodapé Total (Igual ao Vídeo)
+        const totalFaturasMes = d.cartoesDetalhe.reduce((acc, k) => acc + k.faturaMes.total, 0);
+        const totalComprometido = d.cartoesDetalhe.reduce((acc, k) => acc + k.comprometido, 0);
+        const cartoesRowsHtml = d.cartoesDetalhe.map(k => `
+            <div class="fintech-row" onclick="UI1.navegarPara('view-Faturas', 'Faturas de Cartão')" style="cursor:pointer;">
+                <div class="fintech-row-left">
+                    <div>${k.logo}</div>
+                    <div>
+                        <div class="fintech-row-title">${UICommon.esc(k.nome.replace(/^Cart[ãa]o\s+/i, ''))}</div>
+                        <div class="fintech-row-sub">
+                            Fatura ${k.faturaMes.status === 'paga' ? 'paga' : 'aberta'} • Fecha dia ${k.fechamento}
+                        </div>
+                    </div>
+                </div>
+                <div class="fintech-row-right">
+                    <div class="fintech-row-val priv-val">${Services.formatBRL(k.faturaMes.total)} <span style="font-size:0.75rem;color:${k.faturaMes.status === 'paga' ? 'var(--success)' : 'var(--text-muted)'}">${k.faturaMes.status === 'paga' ? '✓' : '🕒'}</span></div>
+                    <div class="fintech-row-sub priv-val">Total: ${Services.formatBRL(k.comprometido)}</div>
+                </div>
+            </div>
+        `).join('');
+
+        const cartoesFooterHtml = d.cartoesDetalhe.length > 0 ? `
+            <div class="fintech-row" style="padding-top:12px;margin-top:4px;border-top:1px solid var(--border-light);">
+                <div class="fintech-row-left">
+                    <div>
+                        <div class="fintech-row-title">Total no mês</div>
+                        <div class="fintech-row-sub">Comprometido geral</div>
+                    </div>
+                </div>
+                <div class="fintech-row-right">
+                    <div class="fintech-row-val priv-val">${Services.formatBRL(totalFaturasMes)}</div>
+                    <div class="fintech-row-sub priv-val">${Services.formatBRL(totalComprometido)}</div>
+                </div>
+            </div>
+        ` : '<span style="color:var(--text-muted);font-size:0.82rem;">Nenhum cartão cadastrado.</span>';
+
+        document.getElementById('dash-cartoes').innerHTML = cartoesRowsHtml + cartoesFooterHtml;
+
+        // Seção Despesas Recentes no Dashboard (Igual ao Vídeo 00:05)
+        const elRecentes = document.getElementById('dash-recentes');
+        if (elRecentes) {
+            const todosLanc = await DB.getAll("lancamentos");
+            const recMes = todosLanc
+                .filter(l => (l.competencia || Services.getCompetencia(l.data)) === comp && l.tipo === 'Despesa')
+                .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id)
+                .slice(0, 5);
+
+            elRecentes.innerHTML = recMes.map(l => {
+                const mParc = (l.item || '').match(/\((\d+)\s*(?:de|\/)\s*(\d+)\)/i);
+                const badgeParc = mParc ? `<div class="fintech-row-sub">${mParc[2]}x</div>` : '';
+                return `
+                    <div class="fintech-row" onclick="UI5.abrirEdicao(${l.id})" style="cursor:pointer;">
+                        <div class="fintech-row-left">
+                            <div class="tx-cat-badge">${this.iconeCategoria(l.categoria, l.tipo)}</div>
+                            <div style="min-width:0;">
+                                <div class="fintech-row-title">${UICommon.esc(l.item)}</div>
+                                <div class="fintech-row-sub">${this.formatarDataCurta(l.data)} • ${UICommon.esc(l.conta)}</div>
+                            </div>
+                        </div>
+                        <div class="fintech-row-right">
+                            <div class="fintech-row-val priv-val" style="color:var(--danger)">${Services.formatBRL(l.valor_cents)}</div>
+                            ${badgeParc}
+                        </div>
+                    </div>
+                `;
+            }).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nenhuma despesa recente neste mês.</span>';
+        }
+
         // A Pagar e A Receber
         document.getElementById('dash-pagar').innerHTML = d.aPagar.slice(0, 8).map(l => `
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:6px 0;border-bottom:1px solid #f4f4f5;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:8px 0;border-bottom:1px solid var(--border-light);">
                 <span><b>${UICommon.esc(l.item)}</b> <span style="color:var(--text-muted)">(${Services.fmtData(l.data)})</span></span>
                 <span style="display:flex;align-items:center;gap:6px;">
-                    <b style="color:var(--danger)">${Services.formatBRL(l.valor_cents)}</b>
+                    <b class="priv-val" style="color:var(--danger)">${Services.formatBRL(l.valor_cents)}</b>
                     <button class="btn-success btn-small" style="padding:3px 7px;font-size:0.7rem;" onclick="UI1.darBaixaRapida(${l.id})">✓</button>
                 </span>
             </div>
         `).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nada pendente a pagar neste mês.</span>';
 
         document.getElementById('dash-receber').innerHTML = d.aReceber.slice(0, 8).map(r => `
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:6px 0;border-bottom:1px solid #f4f4f5;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;padding:8px 0;border-bottom:1px solid var(--border-light);">
                 <span><b>${UICommon.esc(r.desc)}</b> <span style="color:var(--text-muted)">(${Services.fmtData(r.data)})</span></span>
-                <b style="color:var(--success)">${Services.formatBRL(r.valor_cents)}</b>
+                <b class="priv-val" style="color:var(--success)">${Services.formatBRL(r.valor_cents)}</b>
             </div>
         `).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nada pendente a receber neste mês.</span>';
 
@@ -304,21 +613,26 @@ const UI1 = {
         document.getElementById('dash-cats').innerHTML = catsActive.map(c => {
             const pct = c.limite > 0 ? Math.min(100, Math.round((c.gasto / c.limite) * 100)) : (c.gasto > 0 ? 100 : 0);
             const estourou = c.limite > 0 && c.gasto > c.limite;
-            const detRows = c.itens.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:4px 0;border-top:1px solid #f4f4f5;"><span>${Services.fmtData(it.data)} • ${UICommon.esc(it.item)}</span><b>${Services.formatBRL(it.valor_cents)}</b></div>`).join('');
+            const detRows = c.itens.map(it => `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:5px 0;border-top:1px solid var(--border-light);"><span>${Services.fmtData(it.data)} • ${UICommon.esc(it.item)}</span><b class="priv-val">${Services.formatBRL(it.valor_cents)}</b></div>`).join('');
             return `
                 <details class="det">
                     <summary>
-                        <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:600;">
-                            <span>${UICommon.esc(c.nome)}</span>
-                            <span style="color:${estourou ? 'var(--danger)' : 'var(--text-main)'}">${Services.formatBRL(c.gasto)}</span>
-                        </div>
-                        <div class="bar"><i class="${estourou ? 'danger' : ''}" style="width:${pct}%"></i></div>
-                        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;display:flex;justify-content:space-between;">
-                            <span>${c.limite > 0 ? 'Limite: ' + Services.formatBRL(c.limite) : 'Sem limite definido'}</span>
-                            <span>${c.limite > 0 ? pct + '%' : ''}</span>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div class="tx-cat-badge">${this.iconeCategoria(c.nome, 'Despesa')}</div>
+                            <div style="flex:1;">
+                                <div style="display:flex;justify-content:space-between;font-size:0.88rem;font-weight:700;">
+                                    <span>${UICommon.esc(c.nome)}</span>
+                                    <span class="priv-val" style="color:${estourou ? 'var(--danger)' : 'var(--text-main)'}">${Services.formatBRL(c.gasto)}</span>
+                                </div>
+                                <div class="bar"><i class="${estourou ? 'danger' : ''}" style="width:${pct}%"></i></div>
+                                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;display:flex;justify-content:space-between;">
+                                    <span>${c.limite > 0 ? 'Limite: ' + Services.formatBRL(c.limite) : 'Sem limite definido'}</span>
+                                    <span>${c.limite > 0 ? pct + '%' : ''}</span>
+                                </div>
+                            </div>
                         </div>
                     </summary>
-                    <div style="margin-top:8px;">${detRows || '<span style="font-size:0.75rem;color:var(--text-muted);">Sem lançamentos no mês.</span>'}</div>
+                    <div style="margin-top:8px;padding-left:46px;">${detRows || '<span style="font-size:0.75rem;color:var(--text-muted);">Sem lançamentos no mês.</span>'}</div>
                 </details>
             `;
         }).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Sem despesas registradas no mês.</span>';
@@ -328,38 +642,6 @@ const UI1 = {
         document.getElementById('dash-alertas').innerHTML = d.alertas.map(a => `
             <div class="al ${a.nivel}">${ic[a.nivel] || '•'} ${UICommon.esc(a.msg)}</div>
         `).join('') || '<span style="color:var(--success);font-size:0.85rem;font-weight:600;">✓ Tudo sob controle neste mês!</span>';
-
-        // Metas no Dashboard
-        document.getElementById('dash-metas').innerHTML = d.metasCalc.map(m => {
-            const pct = m.objetivo_cents > 0 ? Math.min(100, Math.round((m.acumulado_cents / m.objetivo_cents) * 100)) : 0;
-            return `
-                <div style="margin-bottom:10px;">
-                    <div style="display:flex;justify-content:space-between;font-size:0.84rem;font-weight:600;">
-                        <span>${UICommon.esc(m.nome)}</span>
-                        <span>${Services.formatBRL(m.acumulado_cents)} de ${Services.formatBRL(m.objetivo_cents)} (${pct}%)</span>
-                    </div>
-                    <div class="bar"><i class="success" style="width:${pct}%"></i></div>
-                </div>
-            `;
-        }).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nenhuma meta cadastrada.</span>';
-
-        // Cartões de Crédito com Logos SVG
-        document.getElementById('dash-cartoes').innerHTML = d.cartoesDetalhe.map(k => `
-            <div class="cartao-card">
-                <div>${k.logo}</div>
-                <div style="flex:1;">
-                    <div style="font-weight:700;font-size:0.95rem;">${UICommon.esc(k.nome)}</div>
-                    <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">
-                        ${k.limite_cents ? `Disponível: <b style="color:var(--success)">${Services.formatBRL(k.disponivel)}</b> de ${Services.formatBRL(k.limite_cents)} • Comprometido: <b style="color:var(--danger)">${Services.formatBRL(k.comprometido)}</b>` : `Comprometido total: <b>${Services.formatBRL(k.comprometido)}</b>`}
-                    </div>
-                    <div style="font-size:0.8rem;margin-top:3px;">
-                        Fatura (${comp}): <b style="color:var(--danger)">${Services.formatBRL(k.faturaMes.total)}</b> 
-                        <span class="st ${k.faturaMes.status === 'paga' ? 'pago' : 'pendente'}">${k.faturaMes.status}</span>
-                        <span style="color:var(--text-muted);font-size:0.75rem;"> • Fecha dia ${k.fechamento}${k.vencimento ? ' / Vence dia ' + k.vencimento : ''}</span>
-                    </div>
-                </div>
-            </div>
-        `).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nenhum cartão cadastrado.</span>';
     },
 
     darBaixaRapida: async function(id) {
@@ -371,9 +653,13 @@ const UI1 = {
         let lancamentos = await DB.getAll("lancamentos");
         let mesExtrato = document.getElementById('extrato-mes').value;
         if (!mesExtrato) {
-            mesExtrato = new Date().toISOString().substring(0, 7);
+            mesExtrato = this.dashMesAtual || new Date().toISOString().substring(0, 7);
             document.getElementById('extrato-mes').value = mesExtrato;
         }
+
+        const extLbl = document.getElementById('extrato-month-label');
+        if (extLbl) extLbl.innerText = this.formatarMesExtenso(mesExtrato);
+
         const filtroConta = document.getElementById('extrato-conta') ? document.getElementById('extrato-conta').value : 'todas';
 
         // Popula filtro de contas no extrato
@@ -388,35 +674,61 @@ const UI1 = {
             selConta.value = filtroConta;
         }
 
-        lancamentos = lancamentos.filter(l => (l.competencia || Services.getCompetencia(l.data)) === mesExtrato && (filtroConta === 'todas' || l.conta === filtroConta));
+        lancamentos = lancamentos.filter(l => {
+            const compMatch = (l.competencia || Services.getCompetencia(l.data)) === mesExtrato;
+            const contaMatch = (filtroConta === 'todas' || l.conta === filtroConta);
+            if (!compMatch || !contaMatch) return false;
+            if (this.filtroTipoExtrato === 'Receita') return l.tipo === 'Receita';
+            if (this.filtroTipoExtrato === 'Despesa') return l.tipo === 'Despesa';
+            if (this.filtroTipoExtrato === 'pendente') return l.status === 'pendente';
+            return true;
+        });
         lancamentos.sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
 
         const totalMes = lancamentos.reduce((acc, l) => acc + (l.tipo === 'Receita' ? l.valor_cents : -l.valor_cents), 0);
-        document.getElementById('extrato-resumo').innerText = `${lancamentos.length} lançamento(s) • Resultado líquido: ${Services.formatBRL(totalMes)}`;
+        document.getElementById('extrato-resumo').innerText = `${lancamentos.length} transação(ões) • Resultado: ${Services.formatBRL(totalMes)}`;
 
-        document.getElementById('extrato-list').innerHTML = lancamentos.map(l => `
-            <div class="list-item">
-                <div class="list-item-left">
-                    <span class="list-item-title">${UICommon.esc(l.item)}</span>
-                    <span class="list-item-sub">${Services.fmtData(l.data)} • ${UICommon.esc(l.categoria)} • ${UICommon.esc(l.conta)}</span>
-                    <div style="margin-top:4px;"><span class="st ${l.status}">${l.status}</span> ${l.origem ? `<span class="st">${l.origem}</span>` : ''}</div>
+        // Agrupa lançamentos por data (Estilo Vídeo 00:27)
+        let html = '';
+        let dataAtualGrupo = null;
+        for (const l of lancamentos) {
+            if (l.data !== dataAtualGrupo) {
+                dataAtualGrupo = l.data;
+                html += `<div class="date-group-header">${this.formatarDataCurta(l.data)}</div>`;
+            }
+            const isPago = l.status === 'pago';
+            html += `
+                <div class="list-item">
+                    <div class="tx-row">
+                        <button type="button" class="tx-status-btn ${l.status}" onclick="UI1.alternarStatus(${l.id}, '${l.status}')" title="Alternar Pago/Pendente">
+                            ${isPago ? '✓' : '🕒'}
+                        </button>
+                        <div class="tx-cat-badge">${this.iconeCategoria(l.categoria, l.tipo)}</div>
+                        <div class="list-item-left" style="min-width:0;">
+                            <span class="list-item-title">${UICommon.esc(l.item)}</span>
+                            <span class="list-item-sub">${UICommon.esc(l.categoria)} • ${UICommon.esc(l.conta)}</span>
+                        </div>
+                        <div class="list-item-val ${l.tipo === 'Receita' ? 'rec' : 'des'}">
+                            ${l.tipo === 'Receita' ? '+' : ''}${Services.formatBRL(l.valor_cents)}
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-success btn-small" onclick="UI1.alternarStatus(${l.id}, '${l.status}')">${isPago ? 'Marcar Pendente' : 'Dar Baixa (Pago)'}</button>
+                        <button class="btn-primary btn-small" onclick="UI5.abrirEdicao(${l.id})">Editar</button>
+                        <button class="btn-danger btn-small" onclick="UI5.excluirLancamento(${l.id})">Excluir</button>
+                    </div>
                 </div>
-                <div class="list-item-val ${l.tipo === 'Receita' ? 'rec' : 'des'}">
-                    ${l.tipo === 'Receita' ? '+' : '-'}${Services.formatBRL(l.valor_cents)}
-                </div>
-                <div class="action-buttons">
-                    <button class="btn-success btn-small" onclick="UI1.alternarStatus(${l.id}, '${l.status}')">${l.status === 'pago' ? 'Marcar Pendente' : 'Dar Baixa (Pago)'}</button>
-                    <button class="btn-primary btn-small" onclick="UI5.abrirEdicao(${l.id})">Editar</button>
-                    <button class="btn-danger btn-small" onclick="UI5.excluirLancamento(${l.id})">Excluir</button>
-                </div>
-            </div>
-        `).join('') || '<div class="card" style="text-align:center;color:var(--text-muted);">Nenhum lançamento neste mês.</div>';
+            `;
+        }
+
+        document.getElementById('extrato-list').innerHTML = html || '<div class="card" style="text-align:center;color:var(--text-muted);">Nenhuma transação encontrada neste filtro.</div>';
     },
 
     alternarStatus: async function(id, statusAtual) {
         const novo = statusAtual === 'pago' ? 'pendente' : 'pago';
         await DB.update("lancamentos", id, { status: novo });
         this.renderExtrato();
+        this.renderDashboard();
     },
 
     populateNovoLancamento: async function() {
@@ -447,7 +759,6 @@ const UI1 = {
         const compManual = elComp ? elComp.value : '';
         const isParcela = document.getElementById('novo-is-parcela').checked;
         
-        // Base da competência: se o usuário escolheu manual, respeita a escolha; se deixou em branco, calcula pelo fechamento caso seja cartão!
         const cartoesCadastrados = await DB.getAll("cartoes");
         let baseComp = compManual ? compManual : Services.calcularCompetenciaCartao(dataIso, conta, cartoesCadastrados, tipo);
         
@@ -461,8 +772,6 @@ const UI1 = {
             for (let i = 0; i < n; i++) {
                 let pDate = new Date(anoData, (mesData - 1) + i, diaData);
                 let pDateIso = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}-${String(pDate.getDate()).padStart(2, '0')}`;
-                
-                // Calcula competências incrementais mês a mês para as parcelas futuras
                 let compParcela = Services.addMonths(baseComp, i);
 
                 await DB.add("lancamentos", {
@@ -487,3 +796,16 @@ const UI1 = {
         UI1.renderDashboard();
     }
 };
+
+// Sincroniza o botão voltar (‹) também quando o usuário clica nos itens da tela "Mais" (Menu)
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.menu-btn');
+    if (btn) {
+        const target = btn.getAttribute('data-target');
+        const btnBack = document.getElementById('btn-header-back');
+        if (btnBack && target) {
+            UI1.ultimaViewPrincipal = 'view-Menu';
+            btnBack.style.display = 'inline-flex';
+        }
+    }
+});
