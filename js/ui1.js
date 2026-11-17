@@ -677,27 +677,27 @@ const UI1 = {
 
         const gruposHtml = tresMeses.map((m, idx) => {
             const isMeio = idx === 1;
-            const hRec = m.rec > 0 ? Math.max(12, Math.round((m.rec / maxVal) * 100)) : 6;
-            const hDes = m.des > 0 ? Math.max(12, Math.round((m.des / maxVal) * 100)) : 6;
-            const hFat = m.fat > 0 ? Math.max(12, Math.round((m.fat / maxVal) * 100)) : 6;
+            const hRec = m.rec > 0 ? Math.max(12, Math.round((m.rec / maxVal) * 100)) : 0;
+            const hDes = m.des > 0 ? Math.max(12, Math.round((m.des / maxVal) * 100)) : 0;
+            const hFat = m.fat > 0 ? Math.max(12, Math.round((m.fat / maxVal) * 100)) : 0;
 
             return `
                 <div class="bar-month-group ${isMeio ? 'current' : ''}">
                     <div class="bar-triplet">
                         <div class="bar-col" title="Receitas: ${Services.formatBRL(m.rec)}">
-                            <span class="bar-val-top priv-val">${m.rec > 0 ? this.formatarValorCurto(m.rec) : ''}</span>
+                            <span class="bar-val-side priv-val">${m.rec > 0 ? this.formatarValorCurto(m.rec) : ''}</span>
                             <div class="bar-track">
                                 <div class="bar-fill rec" style="height:${hRec}%;"></div>
                             </div>
                         </div>
                         <div class="bar-col" title="Despesas: ${Services.formatBRL(m.des)}">
-                            <span class="bar-val-top priv-val">${m.des > 0 ? this.formatarValorCurto(m.des) : ''}</span>
+                            <span class="bar-val-side priv-val">${m.des > 0 ? this.formatarValorCurto(m.des) : ''}</span>
                             <div class="bar-track">
                                 <div class="bar-fill des" style="height:${hDes}%;"></div>
                             </div>
                         </div>
                         <div class="bar-col" title="Faturas: ${Services.formatBRL(m.fat)}">
-                            <span class="bar-val-top priv-val">${m.fat > 0 ? this.formatarValorCurto(m.fat) : ''}</span>
+                            <span class="bar-val-side priv-val">${m.fat > 0 ? this.formatarValorCurto(m.fat) : ''}</span>
                             <div class="bar-track">
                                 <div class="bar-fill fat" style="height:${hFat}%;"></div>
                             </div>
