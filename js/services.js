@@ -179,7 +179,7 @@ const Services = {
 
             return {
                 ...c,
-                logo: Logos.getLogoHTML(c.nome),
+                logo: '',
                 comprometido,
                 disponivel,
                 faturaMes: { total: totalMes, pago: pagoMes, pendente: pendMes, status: pendMes === 0 && totalMes > 0 ? "paga" : (totalMes > 0 ? "aberta" : "zerada") }
@@ -219,9 +219,9 @@ const Services = {
         const qmdAbertas = qmdParc.filter(p => p.status !== "pago" && this.getCompetencia(p.vencimento) === comp).map(p => ({ data: p.vencimento, desc: `${p.devedor} (${p.numero}/${p.total_n})`, valor_cents: p.valor_cents, origem: "qmd", id: p.id }));
         const aReceber = [...recPendentes, ...qmdAbertas].sort((a,b) => a.data.localeCompare(b.data));
 
-        // Evolucao 6 meses para o grafico Catmull-Rom
+        // Evolucao 3 meses (Anterior | Atual no meio | Próximo) para o gráfico de barras
         const evo = [];
-        for (let k = -4; k <= 1; k++) {
+        for (let k = -1; k <= 1; k++) {
             const mComp = this.addMonths(comp, k);
             let r = 0, d = 0, f = 0;
             lancamentos.forEach(l => {

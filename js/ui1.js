@@ -475,7 +475,6 @@ const UI1 = {
                     return `
                         <div class="fintech-row">
                             <div class="fintech-row-left">
-                                <div>${logoHtml}</div>
                                 <div>
                                     <div class="fintech-row-title">${UICommon.esc(c.nome)}</div>
                                     <div class="fintech-row-sub">Realizado em caixa</div>
@@ -525,7 +524,6 @@ const UI1 = {
         const cartoesRowsHtml = d.cartoesDetalhe.map(k => `
             <div class="fintech-row" onclick="UI1.navegarPara('view-Faturas', 'Faturas de Cartão')" style="cursor:pointer;">
                 <div class="fintech-row-left">
-                    <div>${k.logo}</div>
                     <div>
                         <div class="fintech-row-title">${UICommon.esc(k.nome.replace(/^Cart[ãa]o\s+/i, ''))}</div>
                         <div class="fintech-row-sub">
@@ -605,8 +603,8 @@ const UI1 = {
             </div>
         `).join('') || '<span style="color:var(--text-muted);font-size:0.82rem;">Nada pendente a receber neste mês.</span>';
 
-        // Gráfico de Evolução Suave (Catmull-Rom)
-        Charts.renderTendenciaSVG('dash-evo-chart', d.evo);
+        // Gráfico de Barras Verticais Arredondadas (3 meses: Anterior | Atual | Próximo)
+        this.renderGraficoBarras('dash-evo-chart', d.evo, comp);
 
         // Despesas por Categoria com Barra de Progresso e Expansão (Details)
         const catsActive = d.catsList.filter(c => c.gasto > 0 || c.limite > 0);
@@ -642,6 +640,84 @@ const UI1 = {
         document.getElementById('dash-alertas').innerHTML = d.alertas.map(a => `
             <div class="al ${a.nivel}">${ic[a.nivel] || '•'} ${UICommon.esc(a.msg)}</div>
         `).join('') || '<span style="color:var(--success);font-size:0.85rem;font-weight:600;">✓ Tudo sob controle neste mês!</span>';
+    },
+
+    formatarValorCurto: function(cents) {
+        const val = Math.abs(Number(cents || 0)) / 100;
+        if (val === 0) return 'R$ 0';
+        if (val >= 1000) {
+            return 'R$ ' + (val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'k';
+        }
+        return 'R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    },
+
+    renderGraficoBarras: function(containerId, evoData, compAtual) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+
+        // Garante exatamente 3 meses: [mês anterior, mês atual, próximo mês]
+        const refComp = compAtual || this.dashMesAtual;
+        const tresMeses = [-1, 0, 1].map(k => {
+            const c = Services.addMonths(refComp, k);
+            const found = (evoData || []).find(item => item.comp === c);
+            return found || { comp: c, rec: 0, des: 0, fat: 0 };
+        });
+
+        let maxVal = 0;
+        tresMeses.forEach(m => {
+            maxVal = Math.max(maxVal, m.rec || 0, m.des || 0, m.fat || 0);
+        });
+        if (maxVal <= 0) maxVal = 10000; // base visual quando tudo for R$ 0,00
+
+        const mesesCurtos = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const fmtMesLabel = (iso) => {
+            const [y, m] = iso.split('-').map(Number);
+            return `${mesesCurtos[(m - 1) % 12]}/${String(y).slice(2)}`;
+        };
+
+        const gruposHtml = tresMeses.map((m, idx) => {
+            const isMeio = idx === 1;
+            const hRec = m.rec > 0 ? Math.max(12, Math.round((m.rec / maxVal) * 100)) : 6;
+            const hDes = m.des > 0 ? Math.max(12, Math.round((m.des / maxVal) * 100)) : 6;
+            const hFat = m.fat > 0 ? Math.max(12, Math.round((m.fat / maxVal) * 100)) : 6;
+
+            return `
+                <div class="bar-month-group ${isMeio ? 'current' : ''}">
+                    <div class="bar-triplet">
+                        <div class="bar-col" title="Receitas: ${Services.formatBRL(m.rec)}">
+                            <span class="bar-val-top priv-val">${m.rec > 0 ? this.formatarValorCurto(m.rec) : ''}</span>
+                            <div class="bar-track">
+                                <div class="bar-fill rec" style="height:${hRec}%;"></div>
+                            </div>
+                        </div>
+                        <div class="bar-col" title="Despesas: ${Services.formatBRL(m.des)}">
+                            <span class="bar-val-top priv-val">${m.des > 0 ? this.formatarValorCurto(m.des) : ''}</span>
+                            <div class="bar-track">
+                                <div class="bar-fill des" style="height:${hDes}%;"></div>
+                            </div>
+                        </div>
+                        <div class="bar-col" title="Faturas: ${Services.formatBRL(m.fat)}">
+                            <span class="bar-val-top priv-val">${m.fat > 0 ? this.formatarValorCurto(m.fat) : ''}</span>
+                            <div class="bar-track">
+                                <div class="bar-fill fat" style="height:${hFat}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bar-month-label">${fmtMesLabel(m.comp)}</div>
+                </div>
+            `;
+        }).join('');
+
+        el.innerHTML = `
+            <div class="bar-chart-legend">
+                <span><i class="leg-dot rec"></i>Receitas</span>
+                <span><i class="leg-dot des"></i>Despesas</span>
+                <span><i class="leg-dot fat"></i>Faturas</span>
+            </div>
+            <div class="bar-chart-stage">
+                ${gruposHtml}
+            </div>
+        `;
     },
 
     darBaixaRapida: async function(id) {
@@ -809,3 +885,7 @@ document.addEventListener('click', function(e) {
         }
     }
 });
+
+if (typeof Logos !== 'undefined') {
+    Logos.getLogoHTML = function() { return ''; };
+}
