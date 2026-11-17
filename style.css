@@ -1161,16 +1161,16 @@ details.det summary::-webkit-details-marker {
 .bar-chart-stage {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 8px;
     align-items: end;
-    padding: 6px 4px 2px 4px;
+    padding: 6px 0 2px 0;
 }
 
 .bar-month-group {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px 6px 8px 6px;
+    padding: 10px 4px 8px 4px;
     border-radius: 16px;
     transition: background 0.15s;
 }
@@ -1182,40 +1182,47 @@ details.det summary::-webkit-details-marker {
 
 .bar-triplet {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    gap: 8px;
-    height: 138px;
+    gap: 6px;
+    height: 120px;
     width: 100%;
 }
 
 .bar-col {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
+    gap: 2px;
     height: 100%;
-    flex: 1;
-    max-width: 24px;
 }
 
-.bar-val-top {
+.bar-val-side {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
     font-size: 0.62rem;
     font-weight: 700;
     color: var(--text-muted);
     white-space: nowrap;
-    margin-bottom: 4px;
-    min-height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-width: 11px;
+    line-height: 1;
+    letter-spacing: -0.01em;
 }
 
 .bar-track {
-    width: 14px;
-    height: 112px;
+    width: 12px;
+    height: 116px;
     background: #f1f5f9;
     border-radius: 999px;
     display: flex;
     align-items: flex-end;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .bar-fill {
